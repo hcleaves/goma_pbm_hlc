@@ -8558,11 +8558,13 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       mat_ptr->u_species_source[species_no][1] = a1; /* t_nuc */
       mat_ptr->u_species_source[species_no][2] = a2; /* A */
       mat_ptr->u_species_source[species_no][3] = a3; /* En/R */
+      mat_ptr->u_species_source[species_no][4] = 1e-6; /* if abs(source)<val, source=0*/
+      mat_ptr->u_species_source[species_no][5] = 1e-9; /* concentration minimum cut off*/
       if (const_read > 4) {
         mat_ptr->u_species_source[species_no][4] = a4; /* source minimum cut off*/
       }
       if (const_read > 5) {
-        mat_ptr->u_species_source[species_no][5] = a5; /* concentration minium cut off*/
+        mat_ptr->u_species_source[species_no][5] = a5; /* concentration minimum cut off*/
       }
       SPF_DBL_VEC(endofstring(es), 6, mat_ptr->u_species_source[species_no]);
     } else if (!strcmp(model_name, "FOAM_PMDI_10_CO2")) {

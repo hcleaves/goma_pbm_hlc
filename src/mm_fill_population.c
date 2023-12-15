@@ -1637,12 +1637,12 @@ extern int breakage_kernel_model(
   double pwr_alf;
   double fragment_dist = -1;
   double breakage_kernel;
-  double C1;     
-  double C2;     
-  double C3;     
-  double eps;    
-  double surf_T; 
-  double visc_d; 
+  double C1;     // fitting param
+  double C2;     // fitting param 
+  double C3;     // fitting param
+  double eps;    // "turbulence energy dissapation"
+  double surf_T; // surface tension of dispersed phase
+  double visc_d; // viscosity of dispersed phase
   double part1;  
   double part2;  
   double part3;  
@@ -1660,25 +1660,24 @@ extern int breakage_kernel_model(
       case POWERLAW_BREAKAGE:
         pwr_alf = mp->moment_breakage_kernel_exp;
         breakage_kernel = mp->moment_breakage_kernel_rate_coeff * (pow(na, pwr_alf));
-        // printf("%lf %lf \n",mp->moment_breakage_kernel_rate_coeff, pow(na,pwr_alf));
         break;
       case EXPONENTIAL_BREAKAGE:
         pwr_alf = mp->moment_breakage_kernel_exp;
         breakage_kernel = mp->moment_breakage_kernel_rate_coeff * (exp(na * pwr_alf));
         break;
       case VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE:
-       C1     = mp->u_moment_breakage[0];  
-       C2     = mp->u_moment_breakage[1];  
-       C3     = mp->u_moment_breakage[2];  
-       eps    = mp->u_moment_breakage[3];  
-       surf_T = mp->u_moment_breakage[4];  
-       visc_d = mp->u_moment_breakage[5];  
-       part1  = C1*pow(eps, 1/3);
-       part2  = C2*surf_T/(mp->u_density[1] * pow(eps, 2/3) * pow(na, 5/9));
-       part3  = C3*visc_d/(pow(mp->u_density[1]*mp->u_density[0],0.5)*pow(eps, 1/3)*pow(na, 4/9));
-       breakage_kernel = part1*erfc(pow(part2 + part3, 0.5));
-       break;
-      default:
+        C1     = mp->u_moment_breakage[0];   // fitting param
+        C2     = mp->u_moment_breakage[1];   // fitting param 
+        C3     = mp->u_moment_breakage[2];   // fitting param
+        eps    = mp->u_moment_breakage[3];   // "turbulence energy dissapation"
+        surf_T = mp->u_moment_breakage[4];   // surface tension of dispersed phase
+        visc_d = mp->u_moment_breakage[5];   // internal phase viscosity
+        part1  = C1*pow(eps, 1/3);
+        part2  = C2*surf_T/(mp->u_density[1] * pow(eps, 2/3) * pow(na, 5/9));
+        part3  = C3*visc_d/(pow(mp->u_density[1]*mp->u_density[0],0.5)*pow(eps, 1/3)*pow(na, 4/9));
+        breakage_kernel = part1*erfc(pow(part2 + part3, 0.5));
+        break;
+      efault:
         GOMA_EH(GOMA_ERROR, "Unknown breakage kernel model");
         return -1;
       }
@@ -1688,7 +1687,8 @@ extern int breakage_kernel_model(
         MKS->BA[k] += breakage_kernel * wa * ((fragment_dist - pow(na, k)));
         break;
       case EROSION_FRAGMENT:
-        fragment_dist = 1 + pow((na - 1), k);
+        GOMA_EH(GOMA_ERROR, "ERROSION_FRAGMENT fragment distribution not set up yet");
+        //fragment_dist = 1 + pow((na - 1), k);
         break;
       case ONEFOUR_FRAGMENT:
         GOMA_EH(GOMA_ERROR, "ONEFOUR fragment distribution not set up yet");
@@ -1700,8 +1700,6 @@ extern int breakage_kernel_model(
         GOMA_EH(GOMA_ERROR, "Unknown fragment distribution");
         return -1;
       }
-      // printf("%d %lf %lf \n", k, breakage_kernel, pow(na,k));
-      // printf("%d %lf\n", k, MKS->BA[k]);
     }
   }
 

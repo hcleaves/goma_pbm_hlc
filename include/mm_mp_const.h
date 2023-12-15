@@ -62,26 +62,26 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define ARRHENIUS_GROWTH_RATE            7
 
 // coalescence
-#define ADDITION_COALESCENCE               4
-#define VISCOSITY_SCALED_COALESCENCE       5
-#define VISCOSITY_BUBBLE_RATIO_COALESCENCE 6
+#define ADDITION_COALESCENCE               8
+#define VISCOSITY_SCALED_COALESCENCE       9
+#define VISCOSITY_BUBBLE_RATIO_COALESCENCE 10
 
 // breakage
-#define POWERLAW_BREAKAGE    4
-#define EXPONENTIAL_BREAKAGE 5
-#define VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE 11
+#define POWERLAW_BREAKAGE    11
+#define EXPONENTIAL_BREAKAGE 12
+#define VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE 13
 
 // fragment
-#define SYMMETRIC_FRAGMENT 6
-#define EROSION_FRAGMENT   7
-#define ONEFOUR_FRAGMENT   8
-#define PARABOLIC_FRAGMENT 9
+#define SYMMETRIC_FRAGMENT 14
+#define EROSION_FRAGMENT   15
+#define ONEFOUR_FRAGMENT   16
+#define PARABOLIC_FRAGMENT 17
 
 // nucleation
-#define TIME_CONTROLLED_NUCLEATION   7
-#define CONCENTRATION_DEPENDENT_PMDI 8
-#define SUSPENSION_NUCLEATION        9
-#define CONSTANT_NUC                 10
+#define TIME_CONTROLLED_NUCLEATION   18
+#define CONCENTRATION_DEPENDENT_PMDI 19
+#define SUSPENSION_NUCLEATION        20
+#define CONSTANT_NUC                 21
 
 /* Source term models */
 #define BOUSS                                      \
