@@ -10225,6 +10225,118 @@ int get_continuous_species_terms(struct Species_Conservation_Terms *st,
             }
           }
         }
+      } else if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_A) {
+        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+          var_offset = MAX_VARIABLE_TYPES + w1;
+          mp->d_species_source[var_offset] = 0.0;
+        }
+
+        err = suspension_species_source_arrhenius_dual_a(w, mp->u_species_source[w], time, tt, dt);
+        st->MassSource[w] = mp->species_source[w];
+
+        if (af->Assemble_Jacobian) {
+
+          var = MASS_FRACTION;
+          if (pd->v[pg->imtrx][MASS_FRACTION]) {
+            for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+              var_offset = MAX_VARIABLE_TYPES + w1;
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset] * bf[var]->phi[j];
+              }
+            }
+          }
+
+          var = TEMPERATURE;
+          if (pd->v[pg->imtrx][var]) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
+            }
+          }
+        }
+      } else if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B) {
+        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+          var_offset = MAX_VARIABLE_TYPES + w1;
+          mp->d_species_source[var_offset] = 0.0;
+        }
+
+        err = suspension_species_source_arrhenius_dual_b(w, mp->u_species_source[w], time, tt, dt);
+        st->MassSource[w] = mp->species_source[w];
+
+        if (af->Assemble_Jacobian) {
+
+          var = MASS_FRACTION;
+          if (pd->v[pg->imtrx][MASS_FRACTION]) {
+            for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+              var_offset = MAX_VARIABLE_TYPES + w1;
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset] * bf[var]->phi[j];
+              }
+            }
+          }
+
+          var = TEMPERATURE;
+          if (pd->v[pg->imtrx][var]) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
+            }
+          }
+        }
+      } else if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_C) {
+        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+          var_offset = MAX_VARIABLE_TYPES + w1;
+          mp->d_species_source[var_offset] = 0.0;
+        }
+
+        err = suspension_species_source_arrhenius_dual_c(w, mp->u_species_source[w], time, tt, dt);
+        st->MassSource[w] = mp->species_source[w];
+
+        if (af->Assemble_Jacobian) {
+
+          var = MASS_FRACTION;
+          if (pd->v[pg->imtrx][MASS_FRACTION]) {
+            for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+              var_offset = MAX_VARIABLE_TYPES + w1;
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset] * bf[var]->phi[j];
+              }
+            }
+          }
+
+          var = TEMPERATURE;
+          if (pd->v[pg->imtrx][var]) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
+            }
+          }
+        }
+      } else if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_D) {
+        for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+          var_offset = MAX_VARIABLE_TYPES + w1;
+          mp->d_species_source[var_offset] = 0.0;
+        }
+
+        err = suspension_species_source_arrhenius_dual_d(w, mp->u_species_source[w], time, tt, dt);
+        st->MassSource[w] = mp->species_source[w];
+
+        if (af->Assemble_Jacobian) {
+
+          var = MASS_FRACTION;
+          if (pd->v[pg->imtrx][MASS_FRACTION]) {
+            for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
+              var_offset = MAX_VARIABLE_TYPES + w1;
+              for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+                st->d_MassSource_dc[w][w1][j] = mp->d_species_source[var_offset] * bf[var]->phi[j];
+              }
+            }
+          }
+
+          var = TEMPERATURE;
+          if (pd->v[pg->imtrx][var]) {
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              st->d_MassSource_dT[w][j] = mp->d_species_source[var] * bf[var]->phi[j];
+            }
+          }
+        }
       } else if (mp->SpeciesSourceModel[w] == SUSPENSION_LIQUID_SOURCE_ARRHENIUS) {
         for (w1 = 0; w1 < pd->Num_Species_Eqn; w1++) {
           var_offset = MAX_VARIABLE_TYPES + w1;

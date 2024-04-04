@@ -275,6 +275,31 @@ EXTERN int suspension_solid_species_source(int species_no, /* Current species nu
                                            double tt,
                                            double dt);
 
+
+EXTERN int suspension_species_source_arrhenius_dual_a(int species_no, /* Current species number */
+                                                      double *param,
+                                                      double time,
+                                                      double tt,
+                                                      double dt);
+
+EXTERN int suspension_species_source_arrhenius_dual_b(int species_no, /* Current species number */
+                                                      double *param,
+                                                      double time,
+                                                      double tt,
+                                                      double dt);
+
+EXTERN int suspension_species_source_arrhenius_dual_c(int species_no, /* Current species number */
+                                                      double *param,
+                                                      double time,
+                                                      double tt,
+                                                      double dt);
+
+EXTERN int suspension_species_source_arrhenius_dual_d(int species_no, /* Current species number */
+                                                      double *param,
+                                                      double time,
+                                                      double tt,
+                                                      double dt);
+
 EXTERN int suspension_liquid_species_source_arrhenius(int species_no, /* Current species number */
                                                       double *param,
                                                       double time,

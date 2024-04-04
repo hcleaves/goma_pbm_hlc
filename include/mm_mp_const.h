@@ -65,23 +65,25 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define ADDITION_COALESCENCE               8
 #define VISCOSITY_SCALED_COALESCENCE       9
 #define VISCOSITY_BUBBLE_RATIO_COALESCENCE 10
+#define AKK_COALESCENCE 11
 
 // breakage
-#define POWERLAW_BREAKAGE    11
-#define EXPONENTIAL_BREAKAGE 12
-#define VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE 13
+#define POWERLAW_BREAKAGE    12
+#define EXPONENTIAL_BREAKAGE 13
+#define VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE 14
 
 // fragment
-#define SYMMETRIC_FRAGMENT 14
-#define EROSION_FRAGMENT   15
-#define ONEFOUR_FRAGMENT   16
-#define PARABOLIC_FRAGMENT 17
+#define SYMMETRIC_FRAGMENT 15
+#define EROSION_FRAGMENT   16
+#define ONEFOUR_FRAGMENT   17
+#define PARABOLIC_FRAGMENT 18
 
 // nucleation
-#define TIME_CONTROLLED_NUCLEATION   18
-#define CONCENTRATION_DEPENDENT_PMDI 19
-#define SUSPENSION_NUCLEATION        20
-#define CONSTANT_NUC                 21
+#define TIME_CONTROLLED_NUCLEATION   19
+#define CONCENTRATION_DEPENDENT_PMDI 20
+#define SUSPENSION_NUCLEATION        21
+#define CONSTANT_NUC                 22
+#define CONCENTRATION_DEPENDENT_GILLETTE 23
 
 /* Source term models */
 #define BOUSS                                      \
@@ -363,6 +365,13 @@ extern int Num_Var_Init_Mat[MAX_NUMBER_MATLS]; /* number of variables to overwri
 #define GILLETTE_RHEOMETER     60
 #define GILLETTE_FOAMY_LIQUID  61
 #define GILLETTE_FOAMY_GASEOUS 62
+
+#define SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_A              63
+#define SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B              64
+#define SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_C              65
+#define SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_D              66
+
+#define MOMENT_SOURCE_EMULSION 163
 
 #define TURBULENT_SA         63 /* Spallart Allmaras */
 #define TURBULENT_SA_DYNAMIC 64 /* Spallart Allmaras */

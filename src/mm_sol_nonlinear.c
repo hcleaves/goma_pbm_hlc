@@ -705,9 +705,6 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
     DPRINTF(stdout, "-------");
   DPRINTF(stdout, "\n");
 
-  if (Num_ROT == 0 /*&& inewton == 0*/ && exo->num_dim == 3) {
-    setup_rotated_bc_nodes(exo, dpi, BC_Types, Num_BC, x);
-  }
 
   // Setup turbulence information
   if (upd->turbulent_info->use_internal_wall_distance) {
@@ -728,6 +725,10 @@ int solve_nonlinear_problem(struct GomaLinearSolverData *ams,
                              upd->turbulent_info->side_set_ids,
                              upd->turbulent_info->wall_distances);
     }
+  }
+
+  if (Num_ROT == 0 /*&& inewton == 0*/ && exo->num_dim == 3) {
+    setup_rotated_bc_nodes(exo, dpi, BC_Types, Num_BC, x);
   }
 
   /*********************************************************************************

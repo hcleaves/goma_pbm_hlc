@@ -244,7 +244,8 @@ void adaptive_wheeler(
   a[0] = nu[1] / nu[0];
   b[0] = 0;
   for (int k = 2; k < ind + 1; k++) {
-    for (int j = 0; j < (2 * ind - k + 2); j++) {
+    //for (int j = 0; j < (2 * ind - k + 2); j++) {
+    for (int j = k; j < (2 * ind - k + 2); j++) {
       sig[k][j] = sig[k - 1][j + 1] - a[k - 2] * sig[k - 1][j] - b[k - 2] * sig[k - 2][j];
     }
     a[k - 1] = sig[k][k + 1] / sig[k][k] - sig[k - 1][k] / sig[k - 1][k - 1];
@@ -290,10 +291,11 @@ void adaptive_wheeler(
   double bmin = 1e128;
   for (int i = 0; i < (*n_out + 1); i++) {
     if (b[i] < bmin) {
+      bmin = b[i]; //swapped
       if (bmin < 0) {
         fprintf(stderr, "Moments %.30e %.30e %.30e %.30e are not realizable\n", moments[0], moments[1], moments[2], moments[3]);
       }
-      bmin = b[i];
+      //bmin = b[i]; //swapped
     }
   }
 
@@ -1596,6 +1598,66 @@ extern int coalescence_kernel_model_pmdi10(
 
   return 0;
 }
+extern int coalescence_kernel_model_emulsion(
+    double *nodes, double *weights, int n_nodes, int n_moments, struct moment_kernel_struct *MKS) {
+
+  double C1;
+  double C2;
+  double shear_rate;
+  double visc_c;   
+  double rhoc;     
+  double volfrac_d; 
+  double surf_T;  
+  double part1;
+  double part2;
+  double part3;
+        
+  for (int k = 0; k < n_moments; k++) {
+    MKS->S[k] = 0;
+    for (int alpha = 0; alpha < n_nodes; alpha++) {
+      for (int beta = 0; beta < n_nodes; beta++) {
+        double coalescence_kernel;
+
+        switch (mp->moment_coalescence_model) {
+        case CONSTANT:
+          coalescence_kernel = mp->moment_coalescence_scale;
+          break;
+        case ADDITION_COALESCENCE:
+          coalescence_kernel = mp->moment_coalescence_scale * (nodes[alpha] + nodes[beta]);
+          break;
+        case AKK_COALESCENCE:
+          shear_rate = pow(fv->SH,2);  
+          rhoc       = mp->u_density[1];
+          volfrac_d  = (fv_old->moment[1] / (1 + fv_old->moment[1]));
+          C1         = mp->u_moment_breakage[0];   // fitting param
+          C2         = mp->u_moment_breakage[1];   // fitting param
+          visc_c     = mp->u_moment_breakage[2];   // external phase viscosity
+          surf_T     = mp->u_moment_breakage[3];   // surface tension of dispersed phase
+          part1 = C1 *pow(pow(nodes[alpha], 1./3.) + pow(nodes[beta], 1./3.),2)*pow(shear_rate, 1./3.)/(1+volfrac_d);
+          //printf("nodes: %15E, %15E,  tothe1.3: %15E, %15E\n", nodes[alpha], nodes[beta], pow(nodes[alpha], 1./3.), pow(nodes[beta], 1./3.));  
+          part2 = pow(pow(nodes[alpha], 2./9.) + pow(nodes[beta], 2./9.),0.5);
+          part3 = C2*visc_c*rhoc*shear_rate*pow(pow(nodes[alpha], 1./3.)*pow(nodes[beta], 1./3.)/(pow(nodes[alpha], 1./3.)+pow(nodes[beta], 1./3.)),4)/(surf_T*pow(1+volfrac_d,3));
+        
+            
+          coalescence_kernel = part1*part2*exp(-part3);
+          //printf("part1 %15E, part2 %15E,exppart3, %15E, part3 %15E coal k: %15E\n", part1, part2, exp(-part3), part3, coalescence_kernel);
+          break;
+        default:
+          GOMA_EH(GOMA_ERROR, "Unknown coalescence kernel");
+          return -1;
+        }
+        double wa = weights[alpha];
+        double wb = weights[beta];
+        double na = nodes[alpha];
+        double nb = nodes[beta];
+        MKS->S[k] += wa * wb * (pow(na + nb, k) - pow(na, k) - pow(nb, k)) * coalescence_kernel;
+      }
+      MKS->S[k] *= 0.5;
+    }
+  }
+
+  return 0;
+}
 extern int coalescence_kernel_model(
     double *nodes, double *weights, int n_nodes, int n_moments, struct moment_kernel_struct *MKS) {
 
@@ -1637,15 +1699,26 @@ extern int breakage_kernel_model(
   double pwr_alf;
   double fragment_dist = -1;
   double breakage_kernel;
+
+  // VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE
   double C1;     // fitting param
   double C2;     // fitting param 
   double C3;     // fitting param
-  double eps;    // "turbulence energy dissapation"
   double surf_T; // surface tension of dispersed phase
   double visc_d; // viscosity of dispersed phase
+  double visc_c; // viscosity of continuous phase
   double part1;  
   double part2;  
   double part3;  
+  
+  double eps;    // "turbulence energy dissapation"
+  double shear_rate; 
+  double volfrac_d;  // vol frac disperse phase
+  double rhod; // denisty disperse phase
+  double rhoc; // density continous phase
+  double top_part;
+  double bot_part;
+  double Erfc; 
 
   for (int k = 0; k < n_moments; k++) {
     MKS->BA[k] = 0;
@@ -1666,25 +1739,42 @@ extern int breakage_kernel_model(
         breakage_kernel = mp->moment_breakage_kernel_rate_coeff * (exp(na * pwr_alf));
         break;
       case VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE:
+        
+        // eps_c/eps, eqn 4  "turbulence energy dissapation"
+        shear_rate = pow(fv->SH,2);  
+        visc_d     = mp->u_moment_breakage[5];   // internal phase viscosity
+        visc_c     = mp->u_moment_breakage[6];   // external phase viscosity
+        rhod       = mp->u_density[0];
+        rhoc       = mp->u_density[1];
+        volfrac_d  = (fv_old->moment[1] / (1 + fv_old->moment[1]));
+        
+        top_part = (1 - volfrac_d)*((volfrac_d*rhod/rhoc) + (1 - volfrac_d));
+        bot_part = 1 + ((1.5*volfrac_d*visc_d)/(visc_d+visc_c));
+        eps = shear_rate*pow(top_part/bot_part,3.0);
+        
         C1     = mp->u_moment_breakage[0];   // fitting param
         C2     = mp->u_moment_breakage[1];   // fitting param 
         C3     = mp->u_moment_breakage[2];   // fitting param
-        eps    = mp->u_moment_breakage[3];   // "turbulence energy dissapation"
         surf_T = mp->u_moment_breakage[4];   // surface tension of dispersed phase
-        visc_d = mp->u_moment_breakage[5];   // internal phase viscosity
-        part1  = C1*pow(eps, 1/3);
-        part2  = C2*surf_T/(mp->u_density[1] * pow(eps, 2/3) * pow(na, 5/9));
-        part3  = C3*visc_d/(pow(mp->u_density[1]*mp->u_density[0],0.5)*pow(eps, 1/3)*pow(na, 4/9));
-        breakage_kernel = part1*erfc(pow(part2 + part3, 0.5));
+        part1  = C1*pow(eps, 1.0/3.0);
+        part2  = C2*surf_T/(rhod * pow(eps, 2.0/3.0) * pow(na, 5.0/9.0));
+        part3  = C3*visc_d/(pow(rhoc*rhod,0.5)*pow(eps, 1.0/3.0)*pow(na, 4.0/9.0));
+        Erfc   = erfc(pow(part2 + part3, 0.5));
+
+        breakage_kernel = part1*Erfc;
+
         break;
-      efault:
+        default:
         GOMA_EH(GOMA_ERROR, "Unknown breakage kernel model");
         return -1;
       }
       switch (mp->moment_fragment_model) {
       case SYMMETRIC_FRAGMENT:
-        fragment_dist = pow(2, 1 - k) * pow(na, k);
+        fragment_dist = pow(2, 1.0 - k) * pow(na, k);
         MKS->BA[k] += breakage_kernel * wa * ((fragment_dist - pow(na, k)));
+        if (k ==0){
+        //printf("SH %lf eps %12E part1 %12E erfc %12E\n", fv->SH, eps, part1, Erfc); 
+        }
         break;
       case EROSION_FRAGMENT:
         GOMA_EH(GOMA_ERROR, "ERROSION_FRAGMENT fragment distribution not set up yet");
@@ -1726,6 +1816,36 @@ extern int nucleation_kernel_model(int n_moments, struct moment_kernel_struct *M
       MKS->NUC[k] += nucleation_kernel * pow(critnuc, k);
     }
     break;
+  }
+  case CONCENTRATION_DEPENDENT_GILLETTE: {
+    int wLiq = -1;
+    int wGas = -1;
+
+    int err = get_gillette_species_indices(&wLiq, &wGas);
+    if (err) {
+      return 0;
+    }
+
+    if (mp->DensityModel == DENSITY_MOMENT_BASED) {
+
+      double M_liq  = mp->u_density[2];
+      double rho_liq = mp->u_density[0];
+      double mf = fv_old->c[wLiq] * M_liq / rho_liq; 
+      double min_nuc = mp->moment_nucleation_min_conc;
+
+      // Here, Helen
+      double maxterm = fmax((mf / min_nuc) - 1, 0);
+      nucleation_kernel = maxterm * mp->moment_nucleation_kernel_rate_coeff;
+      double critnuc = mp->moment_nucleation_kernel_nucelli_volume;
+      // mp->moment_nucleation_kernel_rate_coeff);
+      for (int k = 0; k < n_moments; k++) {
+        MKS->NUC[k] += nucleation_kernel * pow(critnuc, k);
+      }
+      break;
+    } else {
+      GOMA_EH(GOMA_ERROR, "Expected DENSITY_MOMENT_BASED for growth rate");
+      return -1;
+    }
   }
   case CONCENTRATION_DEPENDENT_PMDI: {
     int wH2O = -1;
@@ -1830,7 +1950,8 @@ int get_moment_kernel_struct(struct moment_kernel_struct *MKS) {
   }
 
   double eabs = 1e-4;
-  double rmin[3] = {0, 1e-6, 1e-3};
+  //double rmin[3] = {0, 1e-6, 1e-3};
+  double rmin[3] = {0, 1e-6, 1e-6};
 
   /* Get quad weights and nodes */
   int nnodes_out;
@@ -1944,6 +2065,25 @@ int get_moment_kernel_struct(struct moment_kernel_struct *MKS) {
     // evaluate coalescence kernel (only make sense when nndoes>1 b/c 2nd order process)
     if (nnodes_out > 1) {
       coalescence_kernel_model(nodes, weights, nnodes_out, 2 * nnodes, MKS);
+    }
+    return 0;
+  }
+  case MOMENT_SOURCE_EMULSION: {
+
+    //int wCont     = 0;
+    //int wInternal = 1;
+
+   //int err = get_gillette_species_indices(&wLiq, &wGas);
+   // if (err) {
+   //   return 0;
+  //  }
+
+    // evaluate breakage kernel
+    breakage_kernel_model(nodes, weights, nnodes_out, 2 * nnodes, MKS);
+
+    // evaluate coalescence kernel (only make sense when nndoes>1 b/c 2nd order process)
+    if (nnodes_out > 1) {
+      coalescence_kernel_model_emulsion(nodes, weights, nnodes_out, 2 * nnodes, MKS);
     }
     return 0;
   }
@@ -2118,9 +2258,9 @@ int get_moment_source(double *msource, MOMENT_SOURCE_DEPENDENCE_STRUCT *d_msourc
     }
 
     growth_kernel_scale = mp->u_moment_source[0];
-    nucleation_kernel_scale = mp->u_moment_source[3];
     coalescence_kernel_scale = mp->u_moment_source[1];
     breakage_kernel_scale = mp->u_moment_source[2];
+    nucleation_kernel_scale = mp->u_moment_source[3];
     double H = 1;
 
     if (ls != NULL) {
@@ -2192,7 +2332,9 @@ int get_moment_source(double *msource, MOMENT_SOURCE_DEPENDENCE_STRUCT *d_msourc
       msource[mom] =
           H * (growth_kernel_scale * MKS->G[wLiq][mom] + coalescence_kernel_scale * MKS->S[mom] +
                breakage_kernel_scale * MKS->BA[mom] + nucleation_kernel_scale * MKS->NUC[mom]);
-
+              if (mom ==0){
+              //printf("breakage = %lf, coal = %lf, nuc = %lf \n", breakage_kernel_scale * MKS->BA[mom], MKS->S[mom], MKS->NUC[mom]);
+              }
       if (pd->v[pg->imtrx][MASS_FRACTION]) {
         for (j = 0; j < ei[pg->imtrx]->dof[MASS_FRACTION]; j++) {
           d_msource->C[mom][wLiq][j] = H * MKS->d_G_dC[wLiq][mom][j];
@@ -2208,6 +2350,51 @@ int get_moment_source(double *msource, MOMENT_SOURCE_DEPENDENCE_STRUCT *d_msourc
     free(MKS);
   } break;
 
+  case MOMENT_SOURCE_EMULSION: {
+
+    //double growth_kernel_scale = mp->u_moment_source[0];
+    double coalescence_kernel_scale = mp->u_moment_source[1];
+    double breakage_kernel_scale = mp->u_moment_source[2];
+    //double nucleation_kernel_scale = mp->u_moment_source[3];
+
+    //int j;
+    //int wCont   = 0;
+    //int wInternal = 1;
+
+    //int err1 = get_gillette_species_indices(&wLiq, &wGas);
+    //if (err1) {
+    //  return 0;
+    //}
+
+    double H = 1;
+
+    if (ls != NULL) {
+      load_lsi(ls->Length_Scale);
+      H = 1 - lsi->H;
+    }
+
+    int err = 0;
+    MKS = calloc(sizeof(struct moment_kernel_struct), 1);
+    err = get_moment_kernel_struct(MKS);
+
+    if (err) {
+      free(MKS);
+      return err;
+    }
+     
+    if (fv->moment[0]<1e-6){
+        coalescence_kernel_scale = 0;
+    }
+    for (int mom = 0; mom < MAX_MOMENTS; mom++) {
+      msource[mom] =
+          H * (coalescence_kernel_scale * MKS->S[mom] + breakage_kernel_scale * MKS->BA[mom]);
+          //printf("mom: %d: S%15E: B:%15E\n", mom, MKS->S[mom], MKS->BA[mom]);
+          //if(mom==0){
+          //  printf("mom %d: source = %9E \n", mom, msource[mom]);
+         // }
+    }
+    free(MKS);
+  } break;
   case MOMENT_SUSPENSION_PLUS_MOMENTS: {
     double growth_kernel_scale = mp->u_moment_source[0];
     double nucleation_kernel_scale = mp->u_moment_source[3];
