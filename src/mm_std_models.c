@@ -1729,7 +1729,7 @@ int gillette_foamy_gaseous_species_source(int species_no, /* Current species num
 
   free(MKS);
   return 0;
-}
+}
 
 /*
  * This is the source term for a suspension model
@@ -1742,6 +1742,7 @@ int suspension_liquid_species_source(
     double time,
     double tt, /* tt, dt - time derivative parameters */
     double dt) {
+
   int eqn, var;
   double T = fv->T;
   double Cliq = fv->c[species_no]; // current CONCENTRATION of liquid species
@@ -1918,7 +1919,7 @@ int suspension_species_source_arrhenius_dual_a(
 
     var = TEMPERATURE;
     if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = norm_E1 / (T * T) * source;
+      mp->d_species_source[var] = -norm_E1 / (T * T) * source;
     }
   }
   return source;
@@ -2023,7 +2024,7 @@ int suspension_species_source_arrhenius_dual_b(
 
     var = TEMPERATURE;
     if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = (norm_E1 / (T * T) * source12) +  (norm_E2 / (T * T) * source23);
+      mp->d_species_source[var] = -1*((norm_E1 / (T * T) * source12) +  (norm_E2 / (T * T) * source23));
 
     }
   }
@@ -2128,7 +2129,7 @@ int suspension_species_source_arrhenius_dual_c(
     }
     var = TEMPERATURE;
     if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = (norm_E1 / (T * T) * source12) + (norm_E2 / (T * T) * source23);
+      mp->d_species_source[var] = -1*((norm_E1 / (T * T) * source12) + (norm_E2 / (T * T) * source23));
 
     }
   }
@@ -2228,7 +2229,7 @@ int suspension_species_source_arrhenius_dual_d(
     var = TEMPERATURE;
     if (pd->v[pg->imtrx][var]) 
      {
-      mp->d_species_source[var] = (norm_E2 / (T * T) * source); 
+      mp->d_species_source[var] = -1*(norm_E2 / (T * T) * source); 
 
   }
 }
@@ -2283,7 +2284,7 @@ int suspension_liquid_species_source_arrhenius(
 
     var = TEMPERATURE;
     if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = norm_E / (T * T) * source;
+      mp->d_species_source[var] = -norm_E / (T * T) * source;
     }
   }
   return source;
@@ -2355,7 +2356,7 @@ int suspension_solid_species_source_arrhenius(
 
     var = TEMPERATURE;
     if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = norm_E / (T * T) * source;
+      mp->d_species_source[var] = -norm_E / (T * T) * source;
     }
   }
   return source;
