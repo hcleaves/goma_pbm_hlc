@@ -8710,9 +8710,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 4, sizeof(dbl));
       mat_ptr->len_u_species_source[species_no] = 4;
-      mat_ptr->u_species_source[species_no][0] = a0; /* exp */
-      mat_ptr->u_species_source[species_no][1] = a1; /* A^0_12 */
-      mat_ptr->u_species_source[species_no][2] = a2; /* E^0_12/R, you are responsible for the sign!!! */
+      mat_ptr->u_species_source[species_no][0] = a0; /* n */
+      mat_ptr->u_species_source[species_no][1] = a1; /* A1 */
+      mat_ptr->u_species_source[species_no][2] = a2; /* E1/R, you are responsible for the sign!!! */
       mat_ptr->u_species_source[species_no][3] = a3; /* concentration cuttoff */
       SPF_DBL_VEC(endofstring(es), 1, mat_ptr->u_species_source[species_no]);
 
@@ -8721,21 +8721,19 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       mat_ptr->ExtrinsicIndependentSpeciesVar[species_no] = 0;
-      if (fscanf(imp, "%lf %lf %lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4, &a5, &a6) != 7) {
-        sr = sprintf(err_msg, "Matl %s needs 7 constants for %s %s model.\n",
+      if (fscanf(imp, "%lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4) != 5) {
+        sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
                      pd_glob[mn]->MaterialName, "Species Source",
                      "SUSPENSION_LIQUID_SOURCE_ARRHENIUS_DUAL_B");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 7, sizeof(dbl));
-      mat_ptr->len_u_species_source[species_no] = 7;
-      mat_ptr->u_species_source[species_no][0] = a0; /* exp */
-      mat_ptr->u_species_source[species_no][1] = a1; /* A^1_12 */
-      mat_ptr->u_species_source[species_no][2] = a2; /* E^1_12/R, you are responsible for the sign!!! */
-      mat_ptr->u_species_source[species_no][3] = a3; /* exp */
-      mat_ptr->u_species_source[species_no][4] = a4; /* A^1_23 */
-      mat_ptr->u_species_source[species_no][5] = a5; /* E^1_23/R, you are responsible for the sign!!! */
-      mat_ptr->u_species_source[species_no][6] = a6; /* concentration cuttoff */
+      mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 5, sizeof(dbl));
+      mat_ptr->len_u_species_source[species_no] = 5;
+      mat_ptr->u_species_source[species_no][0] = a0; /* m */
+      mat_ptr->u_species_source[species_no][1] = a1; /* p */
+      mat_ptr->u_species_source[species_no][2] = a2; /* A2 */
+      mat_ptr->u_species_source[species_no][3] = a3; /* E2/R, you are responsible for the sign!!! */
+      mat_ptr->u_species_source[species_no][4] = a4; /* concentration cuttoff */
       SPF_DBL_VEC(endofstring(es), 1, mat_ptr->u_species_source[species_no]);
 
     }  else if (!strcmp(model_name, "SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_C")) {
@@ -8743,18 +8741,16 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       mat_ptr->ExtrinsicIndependentSpeciesVar[species_no] = 0;
-      if (fscanf(imp, "%lf %lf %lf %lf ", &a0, &a1, &a2, &a3) != 4) {
-        sr = sprintf(err_msg, "Matl %s needs 4 constants for %s %s model.\n",
+      if (fscanf(imp, "%lf %lf  ", &a0, &a1) != 2) {
+        sr = sprintf(err_msg, "Matl %s needs 2 constants for %s %s model.\n",
                      pd_glob[mn]->MaterialName, "Species Source",
                      "SUSPENSION_LIQUID_SOURCE_ARRHENIUS_DUAL_C");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 4, sizeof(dbl));
-      mat_ptr->len_u_species_source[species_no] = 4;
-      mat_ptr->u_species_source[species_no][0] = a0; /* p */
-      mat_ptr->u_species_source[species_no][1] = a1; /* A^2_23 */
-      mat_ptr->u_species_source[species_no][2] = a2; /* E^2_23/R, you are responsible for the sign!!! */
-      mat_ptr->u_species_source[species_no][3] = a3; /* concentration cuttoff */
+      mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 2, sizeof(dbl));
+      mat_ptr->len_u_species_source[species_no] = 2;
+      mat_ptr->u_species_source[species_no][0] = a0; /* q */
+      mat_ptr->u_species_source[species_no][1] = a1; /* concentration cuttoff */
       SPF_DBL_VEC(endofstring(es), 1, mat_ptr->u_species_source[species_no]);
 
     } else if (!strcmp(model_name, "SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_D")) {

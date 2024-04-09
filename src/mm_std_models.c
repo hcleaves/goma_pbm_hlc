@@ -1848,15 +1848,34 @@ int suspension_species_source_arrhenius_dual_a(
     double dt)
 
 {
-  int eqn, var;
+  int eqn, var, w;
 
   double Ycurr = fv->c[species_no]; // current CONCENTRATION of liquid species
   double T = fv->T;
 
+  int wYb = -1;
+
+  for (w = 0; w < pd->Num_Species; w++) {
+    if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B) {
+      wYb = w;
+    }
+   }
+
+
+  if (wYb == -1) {
+    GOMA_EH(GOMA_ERROR,
+            "Expected to find a speices with source SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B");
+    return -1;
+  }
+  
   double n                    = param[0];
-  double A12                  = param[1];
-  double norm_E12             = param[2];
+  double A1                   = param[1];
+  double norm_E1              = param[2];
   double concentration_cutoff = param[3]; // species source off for current conc less than or equal to
+
+  double Yb    = fv->c[wYb];
+  double m     = mp->u_species_source[wYb][0];
+  double concb = mp->u_species_source[wYb][4];
 
   double source;
 
@@ -1870,8 +1889,13 @@ int suspension_species_source_arrhenius_dual_a(
   if (Ycurr <= concentration_cutoff) {
     source = 0;
     mp->species_source[species_no] = 0;
-  } else {
-    source = -A12 * exp(norm_E12 / T) * pow(Ycurr, n);
+  } 
+  else if (Yb<=concb){
+    source = 0;
+    mp->species_source[species_no] = 0;
+  } 
+  else {
+    source = -A1 * exp(norm_E1 / T) * pow(Ycurr, n)*pow(Yb, m);
   }
    //printf("species %d source =%f  ", species_no, source);
   /**********************************************************/
@@ -1884,12 +1908,17 @@ int suspension_species_source_arrhenius_dual_a(
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
     if (pd->v[pg->imtrx][var]) {
+        if (Ycurr>=1e-7){
         mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = source * n / Ycurr;
+    }
+        if (Yb>=1e-7){
+        mp->d_species_source[MAX_VARIABLE_TYPES + wYb] = source * m / Yb;
+    }
     }
 
     var = TEMPERATURE;
     if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = norm_E12 / (T * T) * source;
+      mp->d_species_source[var] = norm_E1 / (T * T) * source;
     }
   }
   return source;
@@ -1903,19 +1932,50 @@ int suspension_species_source_arrhenius_dual_b(
     double dt)
 
 {
-  int eqn, var;
+  int eqn, var, w;
 
   double Ycurr = fv->c[species_no]; // current CONCENTRATION of liquid species
   double T = fv->T;
+  int wYa = -1;
+  int wYc = -1;
+
+  for (w = 0; w < pd->Num_Species; w++) {
+    if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_A) {
+      wYa = w;
+    }
+    else if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_C) {
+      wYc = w;
+    }
+  }
+
+  if (wYa == -1) {
+    GOMA_EH(GOMA_ERROR,
+            "Expected to find a speices with source SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_A");
+    return -1;
+  }
+
+  if (wYc == -1) {
+    GOMA_EH(GOMA_ERROR,
+            "Expected to find a speices with source SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_C");
+    return -1;
+  }
 
 
-  double exp_12                = param[0];
-  double A_12                 = param[1];
-  double norm_E_12            = param[2];
-  double exp_23                = param[3];
-  double A_23                 = param[4];
-  double norm_E_23            = param[5];
-  double concentration_cutoff = param[6]; // species source off for current conc less than or equal to
+  double m                    = param[0];
+  double p                    = param[1];
+  double A2                   = param[2];
+  double norm_E2              = param[3];
+  double concentration_cutoff = param[4]; // species source off for current conc less than or equal to
+
+  double Ya       = fv->c[wYa];
+  double n        = mp->u_species_source[wYa][0];
+  double A1       = mp->u_species_source[wYa][1];
+  double norm_E1  = mp->u_species_source[wYa][2];
+  double conca    = mp->u_species_source[wYa][3];
+
+  double Yc    = fv->c[wYc];
+  double q     = mp->u_species_source[wYc][0];
+  double concc = mp->u_species_source[wYc][1];
 
   double source12, source23, source;
 
@@ -1926,13 +1986,17 @@ int suspension_species_source_arrhenius_dual_b(
     return (source);
   }
 
-  if (Ycurr <= concentration_cutoff) {
+  if ((Ycurr <= concentration_cutoff) || (Ya <=conca)){
     source12 = 0;
+   } 
+  else{
+    source12 = -A1 * exp(norm_E1 / T) * pow(Ycurr, m)*pow(Ya, n);
+  }
+  if ((Ycurr <= concentration_cutoff) || (Yc <=concc)){
     source23 = 0;
-    mp->species_source[species_no] = 0;
-  } else {
-    source12 = -A_12 * exp(norm_E_12 / T) * pow(Ycurr, exp_12);
-    source23 = -A_23 * exp(norm_E_23 / T) * pow(Ycurr, exp_23);
+   } 
+  else{
+    source23 = -A2 * exp(norm_E2 / T) * pow(Ycurr, p)*pow(Yc, q);
   }
    source   = source12 + source23;
    //printf("species %d source =%f  ", species_no, source);
@@ -1946,12 +2010,20 @@ int suspension_species_source_arrhenius_dual_b(
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
     if (pd->v[pg->imtrx][var]) {
-        mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = (source12 * exp_12 / Ycurr) + (source23 * exp_23 / Ycurr);
+        if (Ycurr>=1e-7){
+        mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = (source12 * m / Ycurr) + (source23 * p / Ycurr);
+        }
+        if (Ya>=1e-7){
+        mp->d_species_source[MAX_VARIABLE_TYPES + wYa] = (source12 * n / Ya);
+       }
+        if (Yc>=1e-7){
+        mp->d_species_source[MAX_VARIABLE_TYPES + wYc] = (source23 * q / Yc);
+     }
     }
 
     var = TEMPERATURE;
     if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = (norm_E_12 / (T * T) * source12) +  (norm_E_23 / (T * T) * source23);
+      mp->d_species_source[var] = (norm_E1 / (T * T) * source12) +  (norm_E2 / (T * T) * source23);
 
     }
   }
@@ -1994,24 +2066,24 @@ int suspension_species_source_arrhenius_dual_c(
     return -1;
   }
   
-  double Ya = fv->c[wYa];
-  double Yb = fv->c[wYb];
+  double q                    = param[0];
+  double concentration_cutoff = param[1]; // species source off for current conc less than or equal to
 
-  double exp_c_23             = param[0];
-  double A_c_23               = param[1];
-  double norm_E_c_23          = param[2];
-  double concentration_cutoff = param[3]; // species source off for current conc less than or equal to
+  double Ya      = fv->c[wYa];
+  double n       = mp->u_species_source[wYa][0];
+  double A1      = mp->u_species_source[wYa][1];
+  double norm_E1 = mp->u_species_source[wYa][2];
+  double conca   = mp->u_species_source[wYa][3];
 
-  double exp_a_12             = mp->u_species_source[wYa][0];
-  double A_a_12               = mp->u_species_source[wYa][1];
-  double norm_E_a_12          = mp->u_species_source[wYa][2];
-  double conca                = mp->u_species_source[wYa][3];
-  double exp_b_12             = mp->u_species_source[wYb][0];
-  double A_b_12               = mp->u_species_source[wYb][1];
-  double norm_E_b_12          = mp->u_species_source[wYb][2];
-  double concb                = mp->u_species_source[wYb][3];
+  double Yb      = fv->c[wYb];
+  double m       = mp->u_species_source[wYb][0];
+  double p       = mp->u_species_source[wYb][1];
+  double A2      = mp->u_species_source[wYb][2];
+  double norm_E2 = mp->u_species_source[wYb][3];
+  double concb   = mp->u_species_source[wYb][4];
 
-  double source_a_12, source_b_12, source_c_23, source;
+
+  double source12, source23, source;
 
   if (T <= 0) {
     source = 0;
@@ -2020,22 +2092,18 @@ int suspension_species_source_arrhenius_dual_c(
     return (source);
   }
 
-  if (Ycurr <= concentration_cutoff) {
-    source_c_23 = 0;
+  if ((Ya <= conca) || (Yb<=concb)){
+    source12 = 0;
+  } else{
+    source12 = A1 * exp(norm_E1 / T) * pow(Ya, n)*pow(Yb,m);
+  }
+
+  if( (Ycurr <= concentration_cutoff) || (Yb<concb)){
+    source23 = 0;
   } else { 
-    source_c_23 = -A_c_23 * exp(norm_E_c_23 / T) * pow(Ycurr, exp_c_23);
+    source23 = -A2 * exp(norm_E2 / T) * pow(Ycurr, q)*pow(Yb,p);
   }
-  if (Ya <= conca){
-    source_a_12 = 0;
-  } else{
-    source_a_12 = A_a_12 * exp(norm_E_a_12 / T) * pow(Ya, exp_a_12);
-  }
-  if (Yb <= concb){
-    source_b_12 = 0;
-  } else{
-    source_b_12 = A_b_12 * exp(norm_E_b_12 / T) * pow(Yb, exp_b_12);
-  }
-   source = source_a_12 + source_b_12 + source_c_23;
+   source = source12 + source23;
    //printf("species %d source =%f  ", species_no, source);
    mp->species_source[species_no] = source;
   /**********************************************************/
@@ -2048,12 +2116,19 @@ int suspension_species_source_arrhenius_dual_c(
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
     if (pd->v[pg->imtrx][var]) {
-        mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = (source_a_12 * exp_a_12 / Ya) +(source_b_12 * exp_b_12 / Yb) + (source_c_23 * exp_c_23 / Ycurr);
+      if (Ycurr >=1e-7){
+        mp->d_species_source[MAX_VARIABLE_TYPES + species_no] =  (source23 * q / Ycurr);
+       }
+      if (Ya >=1e-7){
+        mp->d_species_source[MAX_VARIABLE_TYPES + wYa] = (source12 * n / Ya);
     }
-
+      if (Yb >=1e-7){
+        mp->d_species_source[MAX_VARIABLE_TYPES + wYb] = (source23 * p / Yb) + (source12 * m/Yb) ;
+       }
+    }
     var = TEMPERATURE;
     if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = (norm_E_a_12 / (T * T) * source_a_12) + (norm_E_b_12 / (T * T) * source_b_12) + (norm_E_c_23 / (T * T) * source_c_23);
+      mp->d_species_source[var] = (norm_E1 / (T * T) * source12) + (norm_E2 / (T * T) * source23);
 
     }
   }
@@ -2074,40 +2149,43 @@ int suspension_species_source_arrhenius_dual_d(
   int wYb = -1;
   int wYc = -1;
 
-  for (w = 0; w < pd->Num_Species; w++) {
-    if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B) {
-      wYb = w;
+  for (w = 0; w < pd->Num_Species; w++) 
+    {
+      if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B) 
+      {
+        wYb = w;
+      }
+      else if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_C) 
+      {
+        wYc = w;
+      }
     }
-    else if (mp->SpeciesSourceModel[w] == SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_C) {
-      wYc = w;
-    }
-  }
 
-  if (wYb == -1) {
+  if (wYb == -1) 
+    {
     GOMA_EH(GOMA_ERROR,
             "Expected to find a speices with source SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B");
     return -1;
-  }
+    }
 
-  if (wYc == -1) {
+  if (wYc == -1) 
+    {
     GOMA_EH(GOMA_ERROR,
             "Expected to find a speices with source SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_C");
     return -1;
-  }
+    }
   
-  double Yb = fv->c[wYb];
-  double Yc = fv->c[wYc];
+  double Yb      = fv->c[wYb];
+  double p       = mp->u_species_source[wYb][1];
+  double A2      = mp->u_species_source[wYb][2];
+  double norm_E2 = mp->u_species_source[wYb][3];
+  double concb   = mp->u_species_source[wYb][4];
 
-  double exp_b_23     = mp->u_species_source[wYb][0];
-  double A_b_23       = mp->u_species_source[wYb][1];
-  double norm_E_b_23  = mp->u_species_source[wYb][2];
-  double concb        = mp->u_species_source[wYb][3];
-  double exp_c_23     = mp->u_species_source[wYc][0];
-  double A_c_23       = mp->u_species_source[wYc][1];
-  double norm_E_c_23  = mp->u_species_source[wYc][2];
-  double concc        = mp->u_species_source[wYc][3];
+  double Yc    = fv->c[wYc];
+  double q     = mp->u_species_source[wYc][0];
+  double concc = mp->u_species_source[wYc][1];
 
-  double source_b_23, source_c_23, source;
+  double  source;
 
   if (T <= 0) {
     source = 0;
@@ -2116,38 +2194,44 @@ int suspension_species_source_arrhenius_dual_d(
     return (source);
   }
 
-  if (Yb <= concb){
-    source_b_23 = 0;
-  } else{
-    source_b_23 = A_b_23 * exp(norm_E_b_23 / T) * pow(Yb, exp_b_23);
+  if ((Yb <= concb) || (Yc<=concc))
+  {
+    source = 0;
+  } 
+  else
+  {
+    source = A2 * exp(norm_E2 / T) * pow(Yb, p)*pow(Yc,q);
   }
-  if (Yc <= concc){
-    source_c_23 = 0;
-  } else{
-    source_c_23 = A_c_23 * exp(norm_E_c_23 / T) * pow(Yc, exp_c_23);
-  }
-   source = source_b_23 + source_c_23;
    //printf("species %d source =%f  ", species_no, source);
    mp->species_source[species_no] = source;
   /**********************************************************/
 
   /* Species piece */
   eqn = MASS_FRACTION;
-  if (pd->e[pg->imtrx][eqn] & T_SOURCE) {
+  if (pd->e[pg->imtrx][eqn] & T_SOURCE) 
+  {
     mp->species_source[species_no] = source;
 
     /* Jacobian entries for source term */
     var = MASS_FRACTION;
-    if (pd->v[pg->imtrx][var]) {
-        mp->d_species_source[MAX_VARIABLE_TYPES + species_no] = (source_b_23 * exp_b_23 / Yb) + (source_c_23 * exp_c_23 / Yc);
-    }
-
+    if (pd->v[pg->imtrx][var]) 
+      {
+      if (Yb >=1e-7)
+        {
+         mp->d_species_source[MAX_VARIABLE_TYPES + wYb] = (source* p / Yb);
+        }
+        if (Yc >=1e-7)
+        {
+          mp->d_species_source[MAX_VARIABLE_TYPES + wYc] = (source* q / Yc);
+        }
+     }    
     var = TEMPERATURE;
-    if (pd->v[pg->imtrx][var]) {
-      mp->d_species_source[var] = (norm_E_b_23 / (T * T) * source_b_23) + (norm_E_c_23 / (T * T) * source_c_23);
+    if (pd->v[pg->imtrx][var]) 
+     {
+      mp->d_species_source[var] = (norm_E2 / (T * T) * source); 
 
-    }
   }
+}
   return source;
 }
 int suspension_liquid_species_source_arrhenius(
