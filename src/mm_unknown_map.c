@@ -1580,6 +1580,12 @@ static void set_interaction_masks(Exo_DB *exo)
         v = MOMENT3;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
+        v = MOMENT4;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
+        v = MOMENT5;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
         v = DENSITY_EQN;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
@@ -1741,6 +1747,12 @@ static void set_interaction_masks(Exo_DB *exo)
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT3;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
+        v = MOMENT4;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
+        v = MOMENT5;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = DENSITY_EQN;
@@ -2476,7 +2488,6 @@ static void set_interaction_masks(Exo_DB *exo)
         v = FILL;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
-
         v = MOMENT0;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
@@ -2487,6 +2498,12 @@ static void set_interaction_masks(Exo_DB *exo)
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT3;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
+        v = MOMENT4;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
+        v = MOMENT5;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = DENSITY_EQN;
@@ -4876,6 +4893,8 @@ static void set_interaction_masks(Exo_DB *exo)
       case R_MOMENT1:
       case R_MOMENT2:
       case R_MOMENT3:
+      case R_MOMENT4:
+      case R_MOMENT5:
         v = VELOCITY1;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
@@ -4895,6 +4914,12 @@ static void set_interaction_masks(Exo_DB *exo)
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT3;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
+        v = MOMENT4;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
+        v = MOMENT5;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;
@@ -4927,6 +4952,12 @@ static void set_interaction_masks(Exo_DB *exo)
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = MOMENT3;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
+        v = MOMENT4;
+        if (Num_Var_In_Type[imtrx][v])
+          eqn_var_mask[imtrx][e][v] = 1;
+        v = MOMENT5;
         if (Num_Var_In_Type[imtrx][v])
           eqn_var_mask[imtrx][e][v] = 1;
         v = TEMPERATURE;

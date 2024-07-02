@@ -119,7 +119,7 @@ extern int assemble_density(void);
 
 extern double PBEVolumeSource_rhoeqn(double time, double dt, double tt, double dFVS_drho[MDE]);
 
-extern int growth_rate_model(int species_index,
+extern int growth_rate_kernel_model(int species_index,
                              double *nodes,
                              double *weights,
                              int n_nodes,
@@ -129,13 +129,13 @@ extern int growth_rate_model(int species_index,
                              double d_growth_rate_dT[MAX_CONC][MDE],
                              struct moment_kernel_struct *MKS);
 
-extern int coalescence_kernel_model(
+extern int coalescence_kernel_model_vol(
     double *nodes, double *weights, int n_nodes, int n_moments, struct moment_kernel_struct *MKS);
 
-extern int moment_breakage_kernel_model(
+extern int moment_breakage_kernel_model_vol(
     double *nodes, double *weights, int n_nodes, int n_moments, struct moment_kernel_struct *MKS);
 
-extern int moment_nucleation_kernel_model(
+extern int moment_nucleation_kernel_model_vol(
     double *nodes, double *weights, int n_nodes, int n_moments, struct moment_kernel_struct *MKS);
 
 extern int get_moment_kernel_struct(struct moment_kernel_struct *MKS);

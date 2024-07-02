@@ -1798,6 +1798,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->len_u_current_source, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_moment_source, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_moment_breakage, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->len_u_moment_fragment, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_density, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_electrical_conductivity, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->len_u_permittivity, 1, MPI_INT);
@@ -2932,6 +2933,8 @@ void ark_landing(void) {
     
     dalloc(m->len_u_moment_breakage, m->u_moment_breakage);
 
+    dalloc(m->len_u_moment_fragment, m->u_moment_fragment);
+
     dalloc(m->len_u_density, m->u_density);
 
     dalloc(m->len_u_electrical_conductivity, m->u_electrical_conductivity);
@@ -3240,6 +3243,8 @@ void noahs_dove(void) {
     crdv(m->len_u_moment_source, m->u_moment_source);
     
     crdv(m->len_u_moment_breakage, m->u_moment_breakage);
+
+    crdv(m->len_u_moment_fragment, m->u_moment_fragment);
 
     crdv(m->len_u_density, m->u_density);
 

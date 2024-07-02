@@ -3890,6 +3890,12 @@ void sum_average_nodal(double **avg_count, double **avg_sum, int global_node, do
       case MOMENT3:
         avg_sum[i][global_node] += fv->moment[3];
         break;
+      case MOMENT4:
+        avg_sum[i][global_node] += fv->moment[4];
+        break;
+      case MOMENT5:
+        avg_sum[i][global_node] += fv->moment[5];
+        break;
       case DENSITY_EQN: {
         double rho = density(NULL, time);
         avg_sum[i][global_node] += rho;

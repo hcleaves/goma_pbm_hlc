@@ -7733,7 +7733,6 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       
           SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_moment_coalescence);
     } else {
-       printf("yellow?");
       if (model_read == -1) {
         GOMA_EH(model_read, "Moment Coalescence Kernel invalid");
       }
@@ -7781,6 +7780,19 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       
           SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_moment_breakage);
 
+    } else if (!strcmp(model_name, "VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE_V2")) {
+       model_read = 1;
+       mat_ptr->moment_breakage_kernel_model = VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE_V2;
+       num_const = read_constants(imp, &(mat_ptr->u_moment_breakage), 0);
+          if (num_const < 8) {
+            sprintf(err_msg, "Material %s - expected at least 8 constants for %s %s model.\n",
+                    pd_ptr->MaterialName, "Moment Breakage Kernel", "VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE_V2");
+            GOMA_EH(GOMA_ERROR, err_msg);
+          }
+          mat_ptr->len_u_moment_breakage = num_const;
+      
+          SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_moment_breakage);
+
      } else {
       if (model_read == -1) {
         GOMA_EH(model_read, "Moment Breakage Kernel invalid");
@@ -7797,15 +7809,26 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
     if (!strcmp(model_name, "SYMMETRIC_FRAGMENT")) {
       model_read = 1;
       mat_ptr->moment_fragment_model = SYMMETRIC_FRAGMENT;
+    } else if (!strcmp(model_name, "UNIFORM_FRAGMENT")) {
+      model_read = 1;
+      mat_ptr->moment_fragment_model = UNIFORM_FRAGMENT;
+    } else if (!strcmp(model_name, "PARABOLIC_FRAGMENT")) {
+      model_read = 1;
+      mat_ptr->moment_fragment_model = PARABOLIC_FRAGMENT;
+      num_const = read_constants(imp, &(mat_ptr->u_moment_fragment), 0);
+         if (num_const < 1) {
+           sprintf(err_msg, "Material %s - expected at least 1 constant for %s %s model.\n",
+                   pd_ptr->MaterialName, "Moment Fragment Distribution", "PARABOLIC_FRAGMENT");
+           GOMA_EH(GOMA_ERROR, err_msg);
+         }
+         mat_ptr->len_u_moment_fragment = num_const;
+         SPF_DBL_VEC(endofstring(es), num_const, mat_ptr->u_moment_fragment);
     } else if (!strcmp(model_name, "EROSION_FRAGMENT")) {
       model_read = 1;
       mat_ptr->moment_fragment_model = EROSION_FRAGMENT;
     } else if (!strcmp(model_name, "ONEFOUR_FRAGMENT")) {
       model_read = 1;
       mat_ptr->moment_fragment_model = ONEFOUR_FRAGMENT;
-    } else if (!strcmp(model_name, "PARABOLIC_FRAGMENT")) {
-      model_read = 1;
-      mat_ptr->moment_fragment_model = PARABOLIC_FRAGMENT;
     }
 
     else {
@@ -8710,9 +8733,9 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
 
       mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 4, sizeof(dbl));
       mat_ptr->len_u_species_source[species_no] = 4;
-      mat_ptr->u_species_source[species_no][0] = a0; /* n */
-      mat_ptr->u_species_source[species_no][1] = a1; /* A1 */
-      mat_ptr->u_species_source[species_no][2] = a2; /* E1/R, you are responsible for the sign!!! */
+      mat_ptr->u_species_source[species_no][0] = a0; /* e1 */
+      mat_ptr->u_species_source[species_no][1] = a1; /* A_abplus */
+      mat_ptr->u_species_source[species_no][2] = a2; /* norm_E_abplus/R, you are responsible for the sign!!! */
       mat_ptr->u_species_source[species_no][3] = a3; /* concentration cuttoff */
       SPF_DBL_VEC(endofstring(es), 1, mat_ptr->u_species_source[species_no]);
 
@@ -8721,18 +8744,60 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       mat_ptr->ExtrinsicIndependentSpeciesVar[species_no] = 0;
-      if (fscanf(imp, "%lf %lf %lf %lf %lf", &a0, &a1, &a2, &a3, &a4) != 5) {
-        sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
+      if (fscanf(imp, "%lf %lf %lf %lf %lf %lf %lf %lf %lf ", &a0, &a1, &a2, &a3, &a4, &a5, &a6, &a7, &a8) != 9) {
+        sr = sprintf(err_msg, "Matl %s needs 9 constants for %s %s model.\n",
                      pd_glob[mn]->MaterialName, "Species Source",
                      "SUSPENSION_LIQUID_SOURCE_ARRHENIUS_DUAL_B");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
+      mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 9, sizeof(dbl));
+      mat_ptr->len_u_species_source[species_no] = 9;
+      mat_ptr->u_species_source[species_no][0] = a0; /* e3 */
+      mat_ptr->u_species_source[species_no][1] = a1; /* e4 */
+      mat_ptr->u_species_source[species_no][2] = a2; /* A_bbplus */
+      mat_ptr->u_species_source[species_no][3] = a3; /* A_bbminus */
+      mat_ptr->u_species_source[species_no][4] = a4; /* A_bplus_bminus */
+      mat_ptr->u_species_source[species_no][5] = a5; /* norm_E_bbplus, you are responsible for the sign!!! */
+      mat_ptr->u_species_source[species_no][6] = a6; /* norm_E_bbminus, you are responsible for the sign!!! */
+      mat_ptr->u_species_source[species_no][7] = a7; /* norm_E_bplus_bminus, you are responsible for the sign!!! */
+      mat_ptr->u_species_source[species_no][8] = a8; /* concentration cuttoff */
+      SPF_DBL_VEC(endofstring(es), 1, mat_ptr->u_species_source[species_no]);
+
+    }  else if (!strcmp(model_name, "SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B_PLUS")) {
+      SpeciesSourceModel =SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B_PLUS;
+      model_read = 1;
+      mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
+      mat_ptr->ExtrinsicIndependentSpeciesVar[species_no] = 0;
+      if (fscanf(imp, "%lf %lf %lf ", &a0, &a1, &a2) != 3) {
+        sr = sprintf(err_msg, "Matl %s needs 3 constants for %s %s model.\n",
+                     pd_glob[mn]->MaterialName, "Species Source",
+                     "SUSPENSION_LIQUID_SOURCE_ARRHENIUS_DUAL_B_PLUS");
+        GOMA_EH(GOMA_ERROR, err_msg);
+      }
+      mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 3, sizeof(dbl));
+      mat_ptr->len_u_species_source[species_no] = 3;
+      mat_ptr->u_species_source[species_no][0] = a0; /* e2 */
+      mat_ptr->u_species_source[species_no][1] = a1; /* e9 */
+      mat_ptr->u_species_source[species_no][2] = a2; /* concentration cuttoff */
+      SPF_DBL_VEC(endofstring(es), 1, mat_ptr->u_species_source[species_no]);
+
+    }  else if (!strcmp(model_name, "SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B_MINUS")) {
+      SpeciesSourceModel =SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_B_MINUS;
+      model_read = 1;
+      mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
+      mat_ptr->ExtrinsicIndependentSpeciesVar[species_no] = 0;
+      if (fscanf(imp, "%lf %lf %lf %lf %lf ", &a0, &a1, &a2, &a3, &a4) != 5) {
+        sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
+                     pd_glob[mn]->MaterialName, "Species Source",
+                     "SUSPENSION_LIQUID_SOURCE_ARRHENIUS_DUAL_B_MINUS");
+        GOMA_EH(GOMA_ERROR, err_msg);
+      }
       mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 5, sizeof(dbl));
       mat_ptr->len_u_species_source[species_no] = 5;
-      mat_ptr->u_species_source[species_no][0] = a0; /* m */
-      mat_ptr->u_species_source[species_no][1] = a1; /* p */
-      mat_ptr->u_species_source[species_no][2] = a2; /* A2 */
-      mat_ptr->u_species_source[species_no][3] = a3; /* E2/R, you are responsible for the sign!!! */
+      mat_ptr->u_species_source[species_no][0] = a0; /* e6 */
+      mat_ptr->u_species_source[species_no][1] = a1; /* e10 */
+      mat_ptr->u_species_source[species_no][2] = a2; /* A_bminusx */
+      mat_ptr->u_species_source[species_no][3] = a3; /* norm_E_bminusx, you are responsible for the sign!!! */
       mat_ptr->u_species_source[species_no][4] = a4; /* concentration cuttoff */
       SPF_DBL_VEC(endofstring(es), 1, mat_ptr->u_species_source[species_no]);
 
@@ -8741,16 +8806,40 @@ void rd_mp_specs(FILE *imp, char input[], int mn, char *echo_file)
       model_read = 1;
       mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
       mat_ptr->ExtrinsicIndependentSpeciesVar[species_no] = 0;
-      if (fscanf(imp, "%lf %lf  ", &a0, &a1) != 2) {
-        sr = sprintf(err_msg, "Matl %s needs 2 constants for %s %s model.\n",
+      if (fscanf(imp, "%lf %lf %lf %lf %lf %lf ", &a0, &a1, &a2, &a3, &a4, &a5) != 6) {
+        sr = sprintf(err_msg, "Matl %s needs 6 constants for %s %s model.\n",
                      pd_glob[mn]->MaterialName, "Species Source",
                      "SUSPENSION_LIQUID_SOURCE_ARRHENIUS_DUAL_C");
         GOMA_EH(GOMA_ERROR, err_msg);
       }
-      mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 2, sizeof(dbl));
-      mat_ptr->len_u_species_source[species_no] = 2;
-      mat_ptr->u_species_source[species_no][0] = a0; /* q */
-      mat_ptr->u_species_source[species_no][1] = a1; /* concentration cuttoff */
+      mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 6, sizeof(dbl));
+      mat_ptr->len_u_species_source[species_no] = 6;
+      mat_ptr->u_species_source[species_no][0] = a0; /* e7 */
+      mat_ptr->u_species_source[species_no][1] = a1; /* A_cx */
+      mat_ptr->u_species_source[species_no][2] = a2; /* norm_E_cx, you are responsible for the sign!!! */
+      mat_ptr->u_species_source[species_no][3] = a3; /* concentration cuttoff */
+      mat_ptr->u_species_source[species_no][4] = a4; /* density species c */
+      mat_ptr->u_species_source[species_no][5] = a5; /* molar mass species c*/
+      SPF_DBL_VEC(endofstring(es), 1, mat_ptr->u_species_source[species_no]);
+
+    }  else if (!strcmp(model_name, "SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_X")) {
+      SpeciesSourceModel =SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_X;
+      model_read = 1;
+      mat_ptr->SpeciesSourceModel[species_no] = SpeciesSourceModel;
+      mat_ptr->ExtrinsicIndependentSpeciesVar[species_no] = 0;
+      if (fscanf(imp, "%lf %lf %lf %lf %lf ", &a0, &a1, &a2, &a3, &a4) != 5) {
+        sr = sprintf(err_msg, "Matl %s needs 5 constants for %s %s model.\n",
+                     pd_glob[mn]->MaterialName, "Species Source",
+                     "SUSPENSION_LIQUID_SOURCE_ARRHENIUS_DUAL_X");
+        GOMA_EH(GOMA_ERROR, err_msg);
+      }
+      mat_ptr->u_species_source[species_no] = (dbl *)array_alloc(1, 6, sizeof(dbl));
+      mat_ptr->len_u_species_source[species_no] = 5;
+      mat_ptr->u_species_source[species_no][0] = a0; /* e5 */
+      mat_ptr->u_species_source[species_no][1] = a1; /* e8 */
+      mat_ptr->u_species_source[species_no][2] = a2; /* A_xc */
+      mat_ptr->u_species_source[species_no][3] = a3; /* norm_E_xc, you are responsible for the sign!!! */
+      mat_ptr->u_species_source[species_no][4] = a4; /* concentration cuttoff */
       SPF_DBL_VEC(endofstring(es), 1, mat_ptr->u_species_source[species_no]);
 
     } else if (!strcmp(model_name, "SUSPENSION_SPECIES_SOURCE_ARRHENIUS_DUAL_D")) {

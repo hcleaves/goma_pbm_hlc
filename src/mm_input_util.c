@@ -680,6 +680,10 @@ int variable_string_to_int(const char *input, const char *err_string)
     var = MOMENT2;
   else if (!strcmp(input, "MOMENT3"))
     var = MOMENT3;
+  else if (!strcmp(input, "MOMENT4"))
+    var = MOMENT4;
+  else if (!strcmp(input, "MOMENT5"))
+    var = MOMENT5;
   else if (!strcmp(input, "DENSITY_EQN"))
     var = DENSITY_EQN;
 

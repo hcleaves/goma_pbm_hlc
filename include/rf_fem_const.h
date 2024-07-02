@@ -513,12 +513,14 @@
 #define MOMENT1            206
 #define MOMENT2            207
 #define MOMENT3            208
-#define DENSITY_EQN        209
-#define PSTAR              210
-#define USTAR              211
-#define VSTAR              212
-#define WSTAR              213
-#define EDDY_NU            214
+#define MOMENT4            209
+#define MOMENT5            210
+#define DENSITY_EQN        211
+#define PSTAR              212
+#define USTAR              213
+#define VSTAR              214
+#define WSTAR              215
+#define EDDY_NU            216
 /*
  * define a variable to hold an external field which will be
  * held fixed in the problem but parametered by the basis functions
@@ -919,13 +921,15 @@
 #define R_MOMENT1      206
 #define R_MOMENT2      207
 #define R_MOMENT3      208
-#define R_DENSITY_EQN  209
-#define R_PSTAR        210
-#define R_USTAR        211
-#define R_VSTAR        212
-#define R_WSTAR        213
-#define R_EDDY_NU      214
-#define V_LAST         215
+#define R_MOMENT4      209
+#define R_MOMENT5      210
+#define R_DENSITY_EQN  211
+#define R_PSTAR        212
+#define R_USTAR        213
+#define R_VSTAR        214
+#define R_WSTAR        215
+#define R_EDDY_NU      216
+#define V_LAST         217
 
 /* MMH
  * This is used for those parts of the code that want to ensure
@@ -1088,7 +1092,7 @@
   11 /* Maximum number of matrices to be solved in segregated solver fashion */
 #endif
 
-#define MAX_MOMENTS 4
+#define MAX_MOMENTS 6
 
 /*
  * Magic numbers for adaptive time step selection -- how much acceleration,

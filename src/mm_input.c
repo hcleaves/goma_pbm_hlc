@@ -8504,6 +8504,10 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         ce = set_eqn(R_MOMENT2, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "moment3")) {
         ce = set_eqn(R_MOMENT3, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "moment4")) {
+        ce = set_eqn(R_MOMENT4, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "moment5")) {
+        ce = set_eqn(R_MOMENT5, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "density")) {
         ce = set_eqn(R_DENSITY_EQN, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "tfmp_mass")) {
@@ -9059,6 +9063,10 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         cv = set_var(MOMENT2, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "MOM3")) {
         cv = set_var(MOMENT3, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "MOM4")) {
+        cv = set_var(MOMENT4, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "MOM5")) {
+        cv = set_var(MOMENT5, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "RHO_EQN")) {
         cv = set_var(DENSITY_EQN, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "TFMP_PRES")) {
@@ -9657,7 +9665,9 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
       case MOMENT1:
       case MOMENT2:
       case MOMENT3:
-        if (fscanf(ifp, "%lf %lf %lf  %lf %lf", &(pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)]),
+      case MOMENT4:
+      case MOMENT5:
+        if (fscanf(ifp, "%lf %lf %lf %lf %lf", &(pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_ADVECTION)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_DIFFUSION)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_SOURCE)]),

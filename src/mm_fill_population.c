@@ -205,6 +205,7 @@ void wheeler_algorithm(int N, double *moments, double *weights, double *nodes) {
 }
 
 void adaptive_wheeler(
+  //adaptive_wheeler(nnodes, fv_old->moment, rmin, eabs, weights, nodes, &nnodes_out);
     int N, double *moments, double *rmin, double eabs, double *weights, double *nodes, int *n_out) {
   if (2 * N > MAX_MOMENTS) {
     GOMA_EH(GOMA_ERROR, "adaptive wheeler error 2*N > MAX_MOMENTS");
@@ -218,8 +219,9 @@ void adaptive_wheeler(
     weights[0] = 0;
     nodes[0] = 0;
     *n_out = 1;
+    //printf("mom0 ==0");
     return;
-  }
+  } 
 
   if (N == 1 || (moments[0] < rmin[0])) {
     weights[0] = moments[0];
@@ -291,15 +293,12 @@ void adaptive_wheeler(
   double bmin = 1e128;
   for (int i = 0; i < (*n_out + 1); i++) {
     if (b[i] < bmin) {
-      bmin = b[i]; //swapped
-      if (bmin < 0) {
-        fprintf(stderr, "Moments %.30e %.30e %.30e %.30e are not realizable\n", moments[0], moments[1], moments[2], moments[3]);
-      }
-      //bmin = b[i]; //swapped
+      bmin = b[i]; 
     }
   }
 
   if (bmin < 0) {
+    fprintf(stderr, "Moments are not realizable\n");
     double moments_tmp[2 * N];
     moment_correction_wright(moments, 2 * N, moments_tmp);
     for (int k = 0; k < (2 * N); k++) {
@@ -1464,7 +1463,7 @@ extern int growth_rate_model_pmdi10(int species_index,
   return 0;
 }
 
-extern int growth_rate_model(int species_index,
+extern int growth_rate_kernel_model(int species_index,
                              double *nodes,
                              double *weights,
                              int n_nodes,
@@ -1515,6 +1514,7 @@ extern int growth_rate_model(int species_index,
   }
   return 0;
 }
+
 
 extern int coalescence_kernel_model_pmdi10(
     double *nodes, double *weights, int n_nodes, int n_moments, struct moment_kernel_struct *MKS) {
@@ -1761,30 +1761,60 @@ extern int breakage_kernel_model(
         part3  = C3*visc_d/(pow(rhoc*rhod,0.5)*pow(eps, 1.0/3.0)*pow(na, 4.0/9.0));
         Erfc   = erfc(pow(part2 + part3, 0.5));
 
+       // if (na <=5e-3){
+          //printf("nodes %lf weights %lf   ", na, wa);
+        //}
         breakage_kernel = part1*Erfc;
 
+        break;
+      case VISCOSITY_AND_SHEAR_DEPENDENT_BREAKAGE_V2:
+        
+        // eps_c/eps, eqn 4  "turbulence energy dissapation"
+        shear_rate = pow(fv->SH,2);  
+        visc_d     = mp->u_moment_breakage[5]*exp(mp->u_moment_breakage[7]*(tran->time_value/60.0)); //what t in minutes
+        //printf("visc d %lf  %lf", visc_d, tran->time_value/60.0);
+        visc_c     = mp->u_moment_breakage[6];   // external phase viscosity
+        rhod       = mp->u_density[0];
+        rhoc       = mp->u_density[1];
+        volfrac_d  = (fv_old->moment[1] / (1 + fv_old->moment[1]));
+        
+        top_part = (1 - volfrac_d)*((volfrac_d*rhod/rhoc) + (1 - volfrac_d));
+        bot_part = 1 + ((1.5*volfrac_d*visc_d)/(visc_d+visc_c));
+        eps = shear_rate*pow(top_part/bot_part,3.0);
+        
+        C1     = mp->u_moment_breakage[0];   // fitting param
+        C2     = mp->u_moment_breakage[1];   // fitting param 
+        C3     = mp->u_moment_breakage[2];   // fitting param
+        surf_T = mp->u_moment_breakage[4];   // surface tension of dispersed phase
+        part1  = C1*pow(eps, 1.0/3.0);
+        part2  = C2*surf_T/(rhod * pow(eps, 2.0/3.0) * pow(na, 5.0/9.0));
+        part3  = C3*visc_d/(pow(rhoc*rhod,0.5)*pow(eps, 1.0/3.0)*pow(na, 4.0/9.0));
+        Erfc   = erfc(pow(part2 + part3, 0.5));
+
+       // if (na <=5e-3){
+          //printf("nodes %lf weights %lf   ", na, wa);
+        //}
+        breakage_kernel = part1*Erfc;
         break;
         default:
         GOMA_EH(GOMA_ERROR, "Unknown breakage kernel model");
         return -1;
       }
       switch (mp->moment_fragment_model) {
-      case SYMMETRIC_FRAGMENT:
-        fragment_dist = pow(2, 1.0 - k) * pow(na, k);
-        MKS->BA[k] += breakage_kernel * wa * ((fragment_dist - pow(na, k)));
-        if (k ==0){
-        //printf("SH %lf eps %12E part1 %12E erfc %12E\n", fv->SH, eps, part1, Erfc); 
-        }
+      case SYMMETRIC_FRAGMENT: //equally sized particles made everytime
+        fragment_dist = pow(2.0, 1.0 - k);
+        MKS->BA[k] += breakage_kernel * wa * ((fragment_dist - 1.0)*pow(na, k));
+        break;
+      case PARABOLIC_FRAGMENT:
+        double C =mp->u_moment_fragment[0];
+        fragment_dist = (C/(1.0+k)) + ((1-(C/2.0))*((24.0/(3.0+k))-(24.0/(2.0+k))+(6.0/(1.0+k))));
+        MKS->BA[k] += breakage_kernel * wa * ((fragment_dist - 1.0)*pow(na, k));
         break;
       case EROSION_FRAGMENT:
         GOMA_EH(GOMA_ERROR, "ERROSION_FRAGMENT fragment distribution not set up yet");
-        //fragment_dist = 1 + pow((na - 1), k);
         break;
       case ONEFOUR_FRAGMENT:
         GOMA_EH(GOMA_ERROR, "ONEFOUR fragment distribution not set up yet");
-        break;
-      case PARABOLIC_FRAGMENT:
-        GOMA_EH(GOMA_ERROR, "PARABOLIC fragment distribution not set up yet");
         break;
       default:
         GOMA_EH(GOMA_ERROR, "Unknown fragment distribution");
@@ -1914,14 +1944,14 @@ extern int nucleation_kernel_model(int n_moments, struct moment_kernel_struct *M
       return -1;
     }
 
-    double MM_liq = mp->u_species_source[wLiquid][0];
-    double rho_liq = mp->u_density[1];
-    double mf = fv_old->c[wLiquid] * MM_liq / rho_liq;
-    double Y1 = fv_old->c[wSolid];
+    double MM_liq     = mp->u_species_source[wLiquid][0];
+    double rho_liq    = mp->u_density[1];
+    double mf         = fv_old->c[wLiquid] * MM_liq / rho_liq;
     nucleation_kernel = mp->moment_nucleation_kernel_rate_coeff;
-    double max_frac = mp->moment_nucleation_min_conc;
+    double max_frac   = mp->moment_nucleation_min_conc;
     double nuc_volume = mp->moment_nucleation_kernel_nucelli_volume;
-    double Bs = nucleation_kernel * Y1 * ((mf - max_frac) / max_frac);
+
+    double Bs = nucleation_kernel * ((mf - max_frac) / max_frac);
 
     if (mf > max_frac) {
       for (int k = 0; k < n_moments; k++) {
@@ -1938,20 +1968,20 @@ extern int nucleation_kernel_model(int n_moments, struct moment_kernel_struct *M
 }
 
 int get_moment_kernel_struct(struct moment_kernel_struct *MKS) {
-  int nnodes = 2; // currently hardcoded for 2 Nodes (4 Moments)
+  int nnodes = 3; // currently hardcoded for 2 Nodes (4 Moments)
   double weights[nnodes], nodes[nnodes];
   double growth_rate[MAX_CONC];
   double d_growth_rate_dc[MAX_CONC][MDE];
   double d_growth_rate_dT[MAX_CONC][MDE];
 
-  if (!pd->gv[MOMENT0] || !pd->gv[MOMENT1] || !pd->gv[MOMENT2] || !pd->gv[MOMENT3]) {
+  if (!pd->gv[MOMENT0] || !pd->gv[MOMENT1] || !pd->gv[MOMENT2] || !pd->gv[MOMENT3] || !pd->gv[MOMENT4] || !pd->gv[MOMENT5]) {
     GOMA_EH(GOMA_ERROR, "Expected Moment equations for moment growth rate");
     return -1;
   }
 
   double eabs = 1e-4;
   //double rmin[3] = {0, 1e-6, 1e-3};
-  double rmin[3] = {0, 1e-6, 1e-6};
+  double rmin[5] = {1e-6, 1e-3, 1e-3, 1e-3, 1e-3};
 
   /* Get quad weights and nodes */
   int nnodes_out;
@@ -2053,7 +2083,7 @@ int get_moment_kernel_struct(struct moment_kernel_struct *MKS) {
     // evaluate growth kernel
     gillette_foamy_growth_rate(growth_rate, d_growth_rate_dc, d_growth_rate_dT);
 
-    growth_rate_model(wLiq, nodes, weights, nnodes_out, 2 * nnodes, growth_rate, d_growth_rate_dc,
+    growth_rate_kernel_model(wLiq, nodes, weights, nnodes_out, 2 * nnodes, growth_rate, d_growth_rate_dc,
                       d_growth_rate_dT, MKS);
 
     // evaluate breakage kernel
@@ -2118,7 +2148,7 @@ int get_moment_kernel_struct(struct moment_kernel_struct *MKS) {
     // evaluate growth kernel
     suspension_growth_rate_plus_moments(growth_rate, d_growth_rate_dc, d_growth_rate_dT);
 
-    growth_rate_model(wLiquid, nodes, weights, nnodes_out, 2 * nnodes, growth_rate,
+    growth_rate_kernel_model(wLiquid, nodes, weights, nnodes_out, 2 * nnodes, growth_rate,
                       d_growth_rate_dc, d_growth_rate_dT, MKS);
 
     // evaluate breakage kernel
@@ -2332,9 +2362,9 @@ int get_moment_source(double *msource, MOMENT_SOURCE_DEPENDENCE_STRUCT *d_msourc
       msource[mom] =
           H * (growth_kernel_scale * MKS->G[wLiq][mom] + coalescence_kernel_scale * MKS->S[mom] +
                breakage_kernel_scale * MKS->BA[mom] + nucleation_kernel_scale * MKS->NUC[mom]);
-              if (mom ==0){
+              //if (mom ==0){
               //printf("breakage = %lf, coal = %lf, nuc = %lf \n", breakage_kernel_scale * MKS->BA[mom], MKS->S[mom], MKS->NUC[mom]);
-              }
+              //}
       if (pd->v[pg->imtrx][MASS_FRACTION]) {
         for (j = 0; j < ei[pg->imtrx]->dof[MASS_FRACTION]; j++) {
           d_msource->C[mom][wLiq][j] = H * MKS->d_G_dC[wLiq][mom][j];
@@ -2372,6 +2402,7 @@ int get_moment_source(double *msource, MOMENT_SOURCE_DEPENDENCE_STRUCT *d_msourc
       load_lsi(ls->Length_Scale);
       H = 1 - lsi->H;
     }
+    //printf("H = %lf \n", H);
 
     int err = 0;
     MKS = calloc(sizeof(struct moment_kernel_struct), 1);
@@ -2389,8 +2420,6 @@ int get_moment_source(double *msource, MOMENT_SOURCE_DEPENDENCE_STRUCT *d_msourc
       msource[mom] =
           H * (coalescence_kernel_scale * MKS->S[mom] + breakage_kernel_scale * MKS->BA[mom]);
           //printf("mom: %d: S%15E: B:%15E\n", mom, MKS->S[mom], MKS->BA[mom]);
-          //if(mom==0){
-          //  printf("mom %d: source = %9E \n", mom, msource[mom]);
          // }
     }
     free(MKS);
@@ -3222,9 +3251,9 @@ int assemble_moments(double time, /* present time value */
       peqn = upd->ep[pg->imtrx][eqn];
       if (peqn > -1) {
         dbl strong_residual = 0;
-        strong_residual = fv_dot_old->moment[mom];
+        strong_residual = fv_dot_old->moment[mom]; //dmk/dt prev time step
         for (int p = 0; p < VIM; p++) {
-          strong_residual += fv->v[p] * fv_old->grad_moment[mom][p];
+          strong_residual += fv->v[p] * fv_old->grad_moment[mom][p]; // dot and sum with prev velo at prev time step
         }
         // strong_residual -= msource[mom];
         dbl h_elem = 0;
@@ -3295,7 +3324,7 @@ int assemble_moments(double time, /* present time value */
         mass = 0.;
         if (pd->TimeIntegration != STEADY) {
           if (pd->e[pg->imtrx][eqn] & T_MASS) {
-            mass = fv_dot->moment[mom];
+            mass = fv_dot->moment[mom]; //dmk/dt
             mass *= -wt_func * det_J * wt;
             mass *= h3;
             mass *= pd->etm[pg->imtrx][eqn][(LOG2_MASS)];
@@ -3305,7 +3334,7 @@ int assemble_moments(double time, /* present time value */
         advection = 0.;
         if (pd->e[pg->imtrx][eqn] & T_ADVECTION) {
           for (p = 0; p < VIM; p++) {
-            advection += vconv[p] * fv->grad_moment[mom][p];
+            advection += vconv[p] * fv->grad_moment[mom][p];//u dot grad mk
           }
 
           advection *= -wt_func * det_J * wt;
@@ -3444,12 +3473,16 @@ int assemble_moments(double time, /* present time value */
                 if (mom == b) {
                   for (p = 0; p < VIM; p++) {
                     advection += vconv[p] * grad_phi_j[p];
+      //               printf("hello?");
                   }
                   advection *= -wt_func * det_J * wt;
                   advection *= h3;
                   advection *= pd->etm[pg->imtrx][eqn][(LOG2_ADVECTION)];
                 }
               }
+       //       if (b ==1){ 
+        //        printf("  %lf advection", advection);
+        //         } 
 
               double divergence = 0.;
               if (pd->e[pg->imtrx][eqn] & T_DIVERGENCE) {

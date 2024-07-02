@@ -806,7 +806,7 @@ Revised:         Summer 1998, SY Tam (UNM)
    * average velocity. Evaluate this here.
    */
   if ((mp->Momentwt_funcModel == SUPG &&
-       (pde[R_MOMENT0] || pde[R_MOMENT1] || pde[R_MOMENT2] || pde[R_MOMENT3]) &&
+       (pde[R_MOMENT0] || pde[R_MOMENT1] || pde[R_MOMENT2] || pde[R_MOMENT3] || pde[R_MOMENT4] || pde[R_MOMENT5]) &&
        pd->gv[R_MOMENTUM1]) ||
       (vn->wt_funcModel == SUPG && pde[R_STRESS11] && pd->gv[R_MOMENTUM1]) ||
       (mp->Spwt_funcModel == SUPG && pde[R_MASS] && (pd->gv[R_MOMENTUM1] || pd->gv[R_MESH1])) ||
@@ -2414,7 +2414,7 @@ Revised:         Summer 1998, SY Tam (UNM)
 #endif
     }
 
-    if (pde[R_MOMENT0] || pde[R_MOMENT1] || pde[R_MOMENT2] || pde[R_MOMENT3]) {
+    if (pde[R_MOMENT0] || pde[R_MOMENT1] || pde[R_MOMENT2] || pde[R_MOMENT3] || pde[R_MOMENT4] || pde[R_MOMENT5]) {
       err = assemble_moments(time_value, theta, delta_t, &pg_data);
       GOMA_EH(err, "assemble_moments");
 #ifdef CHECK_FINITE

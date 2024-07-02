@@ -1634,11 +1634,12 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
               }
 
               if (pd_glob[0]->v[pg->imtrx][MOMENT0] || pd_glob[0]->v[pg->imtrx][MOMENT1] ||
-                  pd_glob[0]->v[pg->imtrx][MOMENT2] || pd_glob[0]->v[pg->imtrx][MOMENT3]) {
+                  pd_glob[0]->v[pg->imtrx][MOMENT2] || pd_glob[0]->v[pg->imtrx][MOMENT3]|| 
+                  pd_glob[0]->v[pg->imtrx][MOMENT4]|| pd_glob[0]->v[pg->imtrx][MOMENT5]) {
                 /*     Floor values to 0 */
                 int floored_values = 0;
-                int moment_floored[4] = {0, 0, 0, 0};
-                for (int var = MOMENT0; var <= MOMENT3; var++) {
+                int moment_floored[MAX_MOMENTS] = {0, 0, 0, 0, 0, 0};
+                for (int var = MOMENT0; var <= MOMENT5; var++) {
                   for (i = 0; i < num_total_nodes; i++) {
                     if (pd_glob[0]->v[pg->imtrx][var]) {
                       int j = Index_Solution(i, var, 0, 0, -1, pg->imtrx);
@@ -1877,15 +1878,15 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
           } // sub-time loop if else
 
           if (pd_glob[0]->v[pg->imtrx][MOMENT0] || pd_glob[0]->v[pg->imtrx][MOMENT1] ||
-              pd_glob[0]->v[pg->imtrx][MOMENT2] || pd_glob[0]->v[pg->imtrx][MOMENT3]) {
+              pd_glob[0]->v[pg->imtrx][MOMENT2] || pd_glob[0]->v[pg->imtrx][MOMENT3] || 
+              pd_glob[0]->v[pg->imtrx][MOMENT2] || pd_glob[0]->v[pg->imtrx][MOMENT5]) {
             /*     Floor values to 0 */
             int floored_values = 0;
-            int moment_floored[4] = {0, 0, 0, 0};
-            for (int var = MOMENT0; var <= MOMENT3; var++) {
+            int moment_floored[MAX_MOMENTS] = {0, 0, 0, 0, 0, 0};
+            for (int var = MOMENT0; var <= MOMENT5; var++) {
               for (i = 0; i < num_total_nodes; i++) {
                 if (pd_glob[0]->v[pg->imtrx][var]) {
                   int j = Index_Solution(i, var, 0, 0, -1, pg->imtrx);
-
                   if (j != -1 && x[pg->imtrx][j] < 0) {
                     x[pg->imtrx][j] = 0.0;
                     floored_values++;
@@ -1898,7 +1899,7 @@ void solve_problem_segregated(Exo_DB *exo, /* ptr to the finite element mesh dat
             int global_floored = 0;
             MPI_Allreduce(&floored_values, &global_floored, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-            for (int i = 0; i < 4; i++) {
+            for (int i = 0; i < MAX_MOMENTS; i++) {
               if (moment_floored[i]) {
                 printf("moment %d floored", i + 1);
               }
