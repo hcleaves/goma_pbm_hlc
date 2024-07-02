@@ -7473,13 +7473,15 @@ struct Equation_Names EQ_Name[] = {
     {"R_EM_H1_IMAG", "EM_H1_IMAG", R_EM_H1_IMAG}, /*   197  */
     {"R_EM_H2_IMAG", "EM_H2_IMAG", R_EM_H2_IMAG},
     {"R_EM_H3_IMAG", "EM_H3_IMAG", R_EM_H3_IMAG},       /*   199  */
-    {"R_EM_CONT_REAL", "EM_CONT_REAL", R_EM_CONT_REAL}, /*   200  */
-    {"R_EM_CONT_IMAG", "EM_CONT_IMAG", R_EM_CONT_IMAG}, /*   201  */
-    {"R_MOMENT0", "MOMENT0", R_MOMENT0},                /*   183  */
-    {"R_MOMENT1", "MOMENT1", R_MOMENT1},                /*   184  */
-    {"R_MOMENT2", "MOMENT2", R_MOMENT2},                /*   185  */
-    {"R_MOMENT3", "MOMENT3", R_MOMENT3},                /*   186  */
-    {"R_DENSITY_EQN", "DENSITY_EQN", R_DENSITY_EQN},    /*   187  */
+    {"R_EM_CONT_REAL", "EM_CONT_REAL", R_EM_CONT_REAL}, /*   203  */
+    {"R_EM_CONT_IMAG", "EM_CONT_IMAG", R_EM_CONT_IMAG}, /*   204  */
+    {"R_MOMENT0", "MOMENT0", R_MOMENT0},                /*   205  */
+    {"R_MOMENT1", "MOMENT1", R_MOMENT1},                /*   206  */
+    {"R_MOMENT2", "MOMENT2", R_MOMENT2},                /*   207  */
+    {"R_MOMENT3", "MOMENT3", R_MOMENT3},                /*   208  */
+    {"R_MOMENT4", "MOMENT4", R_MOMENT4},                /*   209  */
+    {"R_MOMENT5", "MOMENT5", R_MOMENT5},                /*   210  */
+    {"R_DENSITY_EQN", "DENSITY_EQN", R_DENSITY_EQN},    /*   211  */
     {"R_PSTAR", "PSTAR", R_PSTAR},
     {"R_USTAR", "USTAR", R_USTAR},
     {"R_VSTAR", "VSTAR", R_VSTAR},
@@ -7779,6 +7781,8 @@ struct Equation_Names Var_Name[] = {
     {"MOMENT1", "MOM1", MOMENT1},
     {"MOMENT2", "MOM2", MOMENT2},
     {"MOMENT3", "MOM3", MOMENT3},
+    {"MOMENT4", "MOM4", MOMENT5},
+    {"MOMENT5", "MOM5", MOMENT5},
     {"DENSITY_EQN", "RHO_EQN", DENSITY_EQN},
     {"PSTAR", "PSTAR", PSTAR},
     {"USTAR", "USX", USTAR},
@@ -8050,6 +8054,8 @@ struct Equation_Names Exo_Var_Names[] = {
     {"Moment 1", "MOM1", MOMENT1},
     {"Moment 2", "MOM2", MOMENT2},
     {"Moment 3", "MOM3", MOMENT3},
+    {"Moment 4", "MOM4", MOMENT4},
+    {"Moment 5", "MOM5", MOMENT5},
     {"Density equation", "RHO_EQN", DENSITY_EQN},
     {"Pressure Int.", "PSTAR", PSTAR},
     {"U Int.", "USX", USTAR},
@@ -8357,6 +8363,8 @@ struct Equation_Names Var_Units[] = {
     {"Moment 1", "[1]", MOMENT1},
     {"Moment 2", "[1]", MOMENT2},
     {"Moment 3", "[1]", MOMENT3},
+    {"Moment 4", "[1]", MOMENT4},
+    {"Moment 5", "[1]", MOMENT5},
     {"Density equation", "[1]", DENSITY_EQN},
     {"PSTAR", "[1]", PSTAR},
     {"USTAR", "[1]", USTAR},
