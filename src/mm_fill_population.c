@@ -1806,7 +1806,7 @@ extern int breakage_kernel_model(
         MKS->BA[k] += breakage_kernel * wa * ((fragment_dist - 1.0)*pow(na, k));
         break;
       case PARABOLIC_FRAGMENT:
-        double C =mp->u_moment_fragment[0];
+        double C = mp->u_moment_fragment[0];
         fragment_dist = (C/(1.0+k)) + ((1-(C/2.0))*((24.0/(3.0+k))-(24.0/(2.0+k))+(6.0/(1.0+k))));
         MKS->BA[k] += breakage_kernel * wa * ((fragment_dist - 1.0)*pow(na, k));
         break;
