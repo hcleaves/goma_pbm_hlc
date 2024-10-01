@@ -149,7 +149,8 @@
 #define LUB_VISCINT_GAUSSIAN   25
 #define LUB_VISCINT_ANALYTICAL 26
 #define LUB_VISCINT_POWERLAW   27
-#define MAX_LUB_NGP            5
+#define MAX_LUB_NGP            6
+#define LOGARITHMIC            29
 
 /* Residence time kernel functions */
 #define LINEAR_TIMETEMP      1110
@@ -521,6 +522,8 @@
 #define VSTAR              214
 #define WSTAR              215
 #define EDDY_NU            216
+#define TURB_K             217
+#define TURB_OMEGA         218
 /*
  * define a variable to hold an external field which will be
  * held fixed in the problem but parametered by the basis functions
@@ -929,7 +932,9 @@
 #define R_VSTAR        214
 #define R_WSTAR        215
 #define R_EDDY_NU      216
-#define V_LAST         217
+#define R_TURB_K       217
+#define R_TURB_OMEGA   218
+#define V_LAST         219
 
 /* MMH
  * This is used for those parts of the code that want to ensure

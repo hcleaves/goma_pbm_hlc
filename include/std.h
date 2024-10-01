@@ -51,8 +51,8 @@
 #define GOMA_VERSION STRINGCON(GIT_VERSION)
 #else
 #define GOMA_MAJOR_VERSION 7
-#define GOMA_MINOR_VERSION 5
-#define GOMA_PATCH_VERSION 0
+#define GOMA_MINOR_VERSION 8
+#define GOMA_PATCH_VERSION 2
 #define GOMA_VERSION \
   STRINGCON(GOMA_MAJOR_VERSION) "." STRINGCON(GOMA_MINOR_VERSION) "." STRINGCON(GOMA_PATCH_VERSION)
 #endif
@@ -540,6 +540,10 @@ extern int zero_detJ_global;
 #else
 #define UNUSED
 #endif
+#endif
+
+#ifndef MAYBE_UNUSED
+#define MAYBE_UNUSED UNUSED
 #endif
 
 /***************************************************************************/

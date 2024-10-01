@@ -104,6 +104,7 @@ double height_function_model(double *H_U,
   *dH_U_dp = 0.0;
   *dH_U_ddh = 0.0;
   *dH_L_dtime = 0.0;
+  memset(dH_dF, 0.0, sizeof(double) * MDE);
 
   if (pd->TimeIntegration == STEADY)
     time = 0.;
@@ -243,21 +244,29 @@ double height_function_model(double *H_U,
     if (dist > fabs(R)) {
       *H_U = fabs(R);
     } else {
-      *H_U = SGN(R) * (axis_pt[2] - fv->x[2] - sqrt(SQUARE(R) - SQUARE(dist)));
+      dbl sqrt_sR_sdist = sqrt(SQUARE(R) - SQUARE(dist));
+      *H_U = SGN(R) * (axis_pt[2] - fv->x[2] - sqrt_sR_sdist);
       *dH_U_dtime = 0.; /* finish later  */
-      dH_U_dX[0] = ((fv->x[0] - axis_pt[0]) * (1. - SQUARE(dir_angle[0]) / cos_denom) +
-                    (fv->x[1] - axis_pt[1]) * (-dir_angle[0] * dir_angle[1] / cos_denom) +
-                    (fv->x[2] - axis_pt[2]) * (-dir_angle[0] * dir_angle[2] / cos_denom)) /
-                   sqrt(SQUARE(R) - SQUARE(dist));
-      dH_U_dX[1] = ((fv->x[0] - axis_pt[0]) * (-dir_angle[1] * dir_angle[0] / cos_denom) +
-                    (fv->x[1] - axis_pt[1]) * (1. - SQUARE(dir_angle[1]) / cos_denom) +
-                    (fv->x[2] - axis_pt[2]) * (-dir_angle[1] * dir_angle[2] / cos_denom)) /
-                   sqrt(SQUARE(R) - SQUARE(dist));
 
-      dH_U_dX[2] = -1. + ((fv->x[0] - axis_pt[0]) * (-dir_angle[2] * dir_angle[0] / cos_denom) +
-                          (fv->x[1] - axis_pt[1]) * (-dir_angle[2] * dir_angle[1] / cos_denom) +
-                          (fv->x[2] - axis_pt[2]) * (-SQUARE(dir_angle[2]) / cos_denom)) /
-                             sqrt(SQUARE(R) - SQUARE(dist));
+      dH_U_dX[0] = 0.;
+      dH_U_dX[1] = 0.;
+      dH_U_dX[2] = -1.;
+
+      if (DOUBLE_NONZERO(sqrt_sR_sdist)) {
+        dH_U_dX[0] += ((fv->x[0] - axis_pt[0]) * (1. - SQUARE(dir_angle[0]) / cos_denom) +
+                       (fv->x[1] - axis_pt[1]) * (-dir_angle[0] * dir_angle[1] / cos_denom) +
+                       (fv->x[2] - axis_pt[2]) * (-dir_angle[0] * dir_angle[2] / cos_denom)) /
+                      sqrt_sR_sdist;
+        dH_U_dX[1] += ((fv->x[0] - axis_pt[0]) * (-dir_angle[1] * dir_angle[0] / cos_denom) +
+                       (fv->x[1] - axis_pt[1]) * (1. - SQUARE(dir_angle[1]) / cos_denom) +
+                       (fv->x[2] - axis_pt[2]) * (-dir_angle[1] * dir_angle[2] / cos_denom)) /
+                      sqrt_sR_sdist;
+
+        dH_U_dX[2] += ((fv->x[0] - axis_pt[0]) * (-dir_angle[2] * dir_angle[0] / cos_denom) +
+                       (fv->x[1] - axis_pt[1]) * (-dir_angle[2] * dir_angle[1] / cos_denom) +
+                       (fv->x[2] - axis_pt[2]) * (-SQUARE(dir_angle[2]) / cos_denom)) /
+                      sqrt_sR_sdist;
+      }
     }
   }
 
@@ -310,7 +319,6 @@ double height_function_model(double *H_U,
     if (mp->HeightUFunctionModel == FLAT_GRAD_FLAT_MELT) {
       *H_U += fv->sh_dh;
     }
-
   }
 
   else if (mp->HeightUFunctionModel == POLY_TIME) {
@@ -437,7 +445,6 @@ double height_function_model(double *H_U,
       dHext_ds = dHext_dcsi / det_J;
       dH_U_dX[0] += dHext_ds;
     } // end handling of the external field gradients
-
   } else {
     GOMA_EH(GOMA_ERROR, "Not a supported height-function model");
   }
@@ -524,20 +531,26 @@ double height_function_model(double *H_U,
     if (dist > fabs(R)) {
       *H_L = -fabs(R);
     } else {
-      *H_L = SGN(R) * (axis_pt[2] - fv->x[2] - sqrt(SQUARE(R) - SQUARE(dist)));
+      dbl sqrt_sR_sdist = sqrt(SQUARE(R) - SQUARE(dist));
+      *H_L = SGN(R) * (axis_pt[2] - fv->x[2] - sqrt_sR_sdist);
       *dH_L_dtime = 0.; /* finish later  */
-      dH_L_dX[0] = -((fv->x[0] - axis_pt[0]) * (1. - SQUARE(dir_angle[0]) / cos_denom) +
-                     (fv->x[1] - axis_pt[1]) * (-dir_angle[0] * dir_angle[1] / cos_denom) +
-                     (fv->x[2] - axis_pt[2]) * (-dir_angle[0] * dir_angle[2] / cos_denom)) /
-                   sqrt(SQUARE(R) - SQUARE(dist));
-      dH_L_dX[1] = -((fv->x[0] - axis_pt[0]) * (-dir_angle[1] * dir_angle[0] / cos_denom) +
-                     (fv->x[1] - axis_pt[1]) * (1. - SQUARE(dir_angle[1]) / cos_denom) +
-                     (fv->x[2] - axis_pt[2]) * (-dir_angle[1] * dir_angle[2] / cos_denom)) /
-                   sqrt(SQUARE(R) - SQUARE(dist));
-      dH_L_dX[2] = -1. - ((fv->x[0] - axis_pt[0]) * (-dir_angle[2] * dir_angle[0] / cos_denom) +
-                          (fv->x[1] - axis_pt[1]) * (-dir_angle[2] * dir_angle[1] / cos_denom) +
-                          (fv->x[2] - axis_pt[2]) * (-SQUARE(dir_angle[2]) / cos_denom)) /
-                             sqrt(SQUARE(R) - SQUARE(dist));
+      dH_L_dX[0] = 0.;
+      dH_L_dX[1] = 0.;
+      dH_L_dX[2] = -1.;
+      if (DOUBLE_NONZERO(sqrt_sR_sdist)) {
+        dH_L_dX[0] += -((fv->x[0] - axis_pt[0]) * (1. - SQUARE(dir_angle[0]) / cos_denom) +
+                        (fv->x[1] - axis_pt[1]) * (-dir_angle[0] * dir_angle[1] / cos_denom) +
+                        (fv->x[2] - axis_pt[2]) * (-dir_angle[0] * dir_angle[2] / cos_denom)) /
+                      sqrt_sR_sdist;
+        dH_L_dX[1] += -((fv->x[0] - axis_pt[0]) * (-dir_angle[1] * dir_angle[0] / cos_denom) +
+                        (fv->x[1] - axis_pt[1]) * (1. - SQUARE(dir_angle[1]) / cos_denom) +
+                        (fv->x[2] - axis_pt[2]) * (-dir_angle[1] * dir_angle[2] / cos_denom)) /
+                      sqrt_sR_sdist;
+        dH_L_dX[2] += -((fv->x[0] - axis_pt[0]) * (-dir_angle[2] * dir_angle[0] / cos_denom) +
+                        (fv->x[1] - axis_pt[1]) * (-dir_angle[2] * dir_angle[1] / cos_denom) +
+                        (fv->x[2] - axis_pt[2]) * (-SQUARE(dir_angle[2]) / cos_denom)) /
+                      sqrt_sR_sdist;
+      }
     }
   }
 
@@ -604,7 +617,7 @@ double height_function_model(double *H_U,
 
   if (mp->HeightUFunctionModel == WALL_DISTMOD || mp->HeightUFunctionModel == WALL_DISTURB ||
       mp->HeightLFunctionModel == WALL_DISTMOD || mp->HeightLFunctionModel == WALL_DISTURB) {
-    double wall_d, alpha = 0., powerlaw = 1., H_orig = H;
+    double wall_d, alpha = 0., powerlaw = 1., H_orig = H, F_shift = 0.;
     bool Fwall_model = false;
 
     if (mp->HeightUFunctionModel == WALL_DISTMOD) {
@@ -630,12 +643,19 @@ double height_function_model(double *H_U,
     }
 
     if (mp->len_u_heightU_function_constants > 4) {
-      powerlaw = mp->u_heightU_function_constants[4];
+      F_shift = mp->u_heightU_function_constants[4];
     } else if (mp->len_u_heightL_function_constants > 4) {
-      powerlaw = mp->u_heightL_function_constants[4];
+      F_shift = mp->u_heightL_function_constants[4];
+    }
+
+    if (mp->len_u_heightU_function_constants > 5) {
+      powerlaw = mp->u_heightU_function_constants[5];
+    } else if (mp->len_u_heightL_function_constants > 5) {
+      powerlaw = mp->u_heightL_function_constants[5];
     } else {
       powerlaw = gn->nexp;
     }
+
     // Keep wall distance positive
     double rel_dist = MAX(wall_d, 0.) / H_orig;
     // 3 decimal point accuracy on end of boundary layer
@@ -649,18 +669,48 @@ double height_function_model(double *H_U,
       }
       exp_term2 = pow(MAX(exp_term, DBL_SEMI_SMALL), 1. / (2. * powerlaw + 1.));
       if ((ls != NULL || pfd != NULL) && Fwall_model) {
-        H *= (1. - lsi->H) * exp_term2 + lsi->H;
-        dh_grad = (1. - lsi->H) * alpha / (2. * powerlaw + 1.) * pow(exp_term2, -2. * powerlaw);
-        for (j = 0; j < ei[pg->imtrx]->dof[FILL]; j++) {
-          dH_dF[j] = H_orig * lsi->d_H_dF[j] * (1. - exp_term2);
+        // Modified, shifted LS distance & Heaviside variable
+        double F_prime =
+            (DOUBLE_NONZERO(ls->Length_Scale) ? (fv->F / ls->Length_Scale - F_shift) : fv->F);
+        double H_prime, dH_prime = 0.0;
+        if (F_prime <= 1.) {
+          H_prime = 0.5 * (1. + F_prime + sin(PI * F_prime) / PI);
+          dH_prime = 0.5 * (1. + cos(PI * F_prime)) / ls->Length_Scale;
+        } else if (F_prime <= -1.) {
+          H_prime = 0.0;
+        } else {
+          H_prime = 1.0;
+        }
+        double factor = (mp->mp2nd->viscositymask[1] ? (1.0 - H_prime) : H_prime);
+        if (mp->Lub_LS_Interpolation == LOGARITHMIC) {
+          if ((fabs(F_prime) <= 1.) || (F_prime > 0 && mp->mp2nd->viscositymask[1]) ||
+              (F_prime < 0 && mp->mp2nd->viscositymask[0])) {
+            double H_log = (DOUBLE_NONZERO(exp_term2) ? log(1.0 / exp_term2) : 0.0);
+            if (fabs(F_prime) <= 1.) {
+              H = pow(H_orig * exp_term2, factor) * pow(H_orig, 1.0 - factor);
+              dh_grad = (H / (H_orig * exp_term2)) * factor * H_orig * alpha *
+                        exp(-alpha * rel_dist) / (2. * powerlaw + 1.) * pow(H, -2. * powerlaw);
+              for (j = 0; j < ei[pg->imtrx]->dof[FILL]; j++) {
+                dH_dF[j] = H * H_log * dH_prime * bf[FILL]->phi[j];
+              }
+            }
+          } else {
+            H *= exp_term2;
+            dh_grad = H_orig * alpha * exp(-alpha * rel_dist) / (2. * powerlaw + 1.) *
+                      pow(H, -2. * powerlaw);
+          }
+        } else {
+          H *= factor * exp_term2 + (1.0 - factor);
+          dh_grad = factor * H_orig * alpha * exp(-alpha * rel_dist) / (2. * powerlaw + 1.) *
+                    pow(H, -2. * powerlaw);
+          for (j = 0; j < ei[pg->imtrx]->dof[FILL]; j++) {
+            dH_dF[j] = H_orig * (1. - exp_term2) * dH_prime * bf[FILL]->phi[j];
+          }
         }
       } else {
         H *= exp_term2;
-        dh_grad = alpha / (2. * powerlaw + 1.) * pow(exp_term2, -2. * powerlaw);
-        if (0 && H < DBL_SEMI_SMALL) {
-          H = DBL_SEMI_SMALL;
-          dh_grad = 0.0;
-        }
+        dh_grad =
+            H_orig * alpha * exp(-alpha * rel_dist) / (2. * powerlaw + 1.) * pow(H, -2. * powerlaw);
       }
       if (mp->HeightUFunctionModel == WALL_DISTMOD) {
         dH_U_dX[0] = dh_grad * fv->grad_ext_field[mp->heightU_ext_field_index][0];
@@ -686,7 +736,6 @@ double height_function_model(double *H_U,
       dH_L_dX[0] = dH_L_dX[1] = dH_L_dX[2] = 0.;
     }
   }
-
   return (H);
 }
 

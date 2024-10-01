@@ -570,6 +570,7 @@ void noahs_ark(void) {
 #endif
   ddd_add_member(n, &Guess_Flag, 1, MPI_INT);
   ddd_add_member(n, &Conformation_Flag, 1, MPI_INT);
+  ddd_add_member(n, &Print3DBCDup, 1, MPI_INT);
 
   /*
    * The variable initialization structures are of fixed size, but only
@@ -630,6 +631,8 @@ void noahs_ark(void) {
   ddd_add_member(n, &tran->TimeMax, 1, MPI_DOUBLE);
   ddd_add_member(n, &tran->theta, 1, MPI_DOUBLE);
   ddd_add_member(n, &tran->eps, 1, MPI_DOUBLE);
+  ddd_add_member(n, tran->relaxation, MAX_NUM_MATRICES, MPI_DOUBLE);
+  ddd_add_member(n, tran->relaxation_tolerance, MAX_NUM_MATRICES, MPI_DOUBLE);
 
   /*
     for ( i=0; i<MAX_VARIABLE_TYPES; i++)
@@ -690,7 +693,9 @@ void noahs_ark(void) {
   ddd_add_member(n, Matrix_Relative_Threshold, MAX_CHAR_IN_INPUT, MPI_CHAR);
   ddd_add_member(n, Matrix_Absolute_Threshold, MAX_CHAR_IN_INPUT, MPI_CHAR);
   ddd_add_member(n, Amesos_Package, MAX_CHAR_IN_INPUT, MPI_CHAR);
+  ddd_add_member(n, Amesos2_Package, MAX_CHAR_IN_INPUT, MPI_CHAR);
   ddd_add_member(n, Stratimikos_File, MAX_CHAR_IN_INPUT * MAX_NUM_MATRICES, MPI_CHAR);
+  ddd_add_member(n, Amesos2_File, MAX_CHAR_IN_INPUT * MAX_NUM_MATRICES, MPI_CHAR);
 
   ddd_add_member(n, &Linear_Solver, 1, MPI_INT);
 
@@ -706,6 +711,7 @@ void noahs_ark(void) {
   ddd_add_member(n, &custom_tol3, 1, MPI_DOUBLE);
   ddd_add_member(n, &Newt_Jacobian_Reformation_stride, 1, MPI_INT);
   ddd_add_member(n, &Time_Jacobian_Reformation_stride, 1, MPI_INT);
+  ddd_add_member(n, &Newton_Line_Search_Type, 1, MPI_INT);
   ddd_add_member(n, &modified_newton, 1, MPI_INT);
   ddd_add_member(n, &convergence_rate_tolerance, 1, MPI_DOUBLE);
   ddd_add_member(n, &modified_newt_norm_tol, 1, MPI_DOUBLE);
@@ -1006,6 +1012,11 @@ void noahs_ark(void) {
   ddd_add_member(n, &upd->Light_Cosmu, 1, MPI_DOUBLE);
   ddd_add_member(n, &upd->SegregatedSolve, 1, MPI_INT);
   ddd_add_member(n, &upd->SegregatedSubcycles, 1, MPI_INT);
+  ddd_add_member(n, &upd->AutoDiff, 1, MPI_INT);
+  ddd_add_member(n, &upd->disable_pspg_tau_sensitivities, 1, MPI_INT);
+  ddd_add_member(n, &upd->disable_supg_tau_sensitivities, 1, MPI_INT);
+  ddd_add_member(n, &upd->supg_lagged_tau, 1, MPI_INT);
+  ddd_add_member(n, &upd->pspg_lagged_tau, 1, MPI_INT);
   ddd_add_member(n, &upd->PSPG_advection_correction, 1, MPI_INT);
   ddd_add_member(n, &upd->petsc_solve_post_proc, 1, MPI_INT);
   ddd_add_member(n, &upd->devss_traceless_gradient, 1, MPI_INT);
@@ -1020,6 +1031,8 @@ void noahs_ark(void) {
   ddd_add_member(n, &(upd->turbulent_info->use_internal_wall_distance), 1, MPI_INT);
   ddd_add_member(n, &(upd->turbulent_info->num_node_sets), 1, MPI_INT);
   ddd_add_member(n, &(upd->turbulent_info->num_side_sets), 1, MPI_INT);
+  ddd_add_member(n, &(upd->turbulent_info->k_inf), 1, MPI_DOUBLE);
+  ddd_add_member(n, &(upd->turbulent_info->omega_inf), 1, MPI_DOUBLE);
 
   for (i = 0; i < upd->Num_Mat; i++) {
     int imtrx;
@@ -1582,6 +1595,16 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->FSIModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->TurbulentLubricationModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->LubIntegrationModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->Lub_Curv_DiffModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->Lub_Curv_RelaxModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->Lub_Kwt_funcModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->Lub_Curv_MassLump, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->Lub_Curv_NormalModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->Lub_Curv_Modulation, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->Lub_Heat_XferModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->Lub_Heat_TambModel, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->Lub_LS_Interpolation, 1, MPI_INT);
+    ddd_add_member(n, &mp_glob[i]->Lub_Curv_Combine, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PorousShellClosedPorosityModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PorousShellClosedRadiusModel, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->PorousShellClosedHeightModel, 1, MPI_INT);
@@ -1861,6 +1884,11 @@ void noahs_ark(void) {
     ddd_add_member(n, &mp_glob[i]->cap_pres_tableid, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->LubInt_NGP, 1, MPI_INT);
     ddd_add_member(n, &mp_glob[i]->LubInt_PL, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->Lub_Curv_Diff, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->Lub_Curv_Relax, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->Lub_Kwt_func, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->Lub_Heat_Xfer, 1, MPI_DOUBLE);
+    ddd_add_member(n, &mp_glob[i]->Lub_Heat_Tamb, 1, MPI_DOUBLE);
 
     /*
      * Material property constants that are vectors over the concentration
@@ -2295,8 +2323,21 @@ void noahs_ark(void) {
       ddd_add_member(n, &ve_glob[i][mode]->gn->DilVisc0, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->gn->DilViscModel, 1, MPI_INT);
 
-      ddd_add_member(n, &ve_glob[i][mode]->time_const, 1, MPI_DOUBLE);
-      ddd_add_member(n, &ve_glob[i][mode]->time_constModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->ConstitutiveEquation, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->lambda0, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->lambda0Model, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->pos_ls_lambda, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->nexp, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->nexpModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->lambdainf, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->lambdainfModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->carreau_lambda, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->carreau_lambdaModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->aexp, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->aexpModel, 1, MPI_INT);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->atexp, 1, MPI_DOUBLE);
+      ddd_add_member(n, &ve_glob[i][mode]->time_const_st->atexpModel, 1, MPI_INT);
+
       ddd_add_member(n, &ve_glob[i][mode]->alpha, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->alphaModel, 1, MPI_INT);
       ddd_add_member(n, &ve_glob[i][mode]->xi, 1, MPI_DOUBLE);
@@ -2316,7 +2357,6 @@ void noahs_ark(void) {
       ddd_add_member(n, &ve_glob[i][mode]->extensibility, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->extensibilityModel, 1, MPI_INT);
 
-      ddd_add_member(n, &ve_glob[i][mode]->pos_ls.time_const, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.alpha, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.xi, 1, MPI_DOUBLE);
       ddd_add_member(n, &ve_glob[i][mode]->pos_ls.eps, 1, MPI_DOUBLE);
@@ -2382,6 +2422,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &elc_glob[i]->lame_mu_model, 1, MPI_INT);
 
     ddd_add_member(n, &elc_glob[i]->len_u_mu, 1, MPI_INT);
+    ddd_add_member(n, &elc_glob[i]->len_u_mu_ns, 1, MPI_INT);
 
     ddd_add_member(n, elc_glob[i]->d_lame_mu, MAX_VARIABLE_TYPES + MAX_CONC, MPI_DOUBLE);
     ddd_add_member(n, &elc_glob[i]->lame_mu_tableid, 1, MPI_INT);
@@ -2450,6 +2491,7 @@ void noahs_ark(void) {
     ddd_add_member(n, &elc_rs_glob[i]->lame_mu_model, 1, MPI_INT);
 
     ddd_add_member(n, &elc_rs_glob[i]->len_u_mu, 1, MPI_INT);
+    ddd_add_member(n, &elc_rs_glob[i]->len_u_mu_ns, 1, MPI_INT);
 
     ddd_add_member(n, elc_rs_glob[i]->d_lame_mu, MAX_VARIABLE_TYPES + MAX_CONC, MPI_DOUBLE);
     ddd_add_member(n, &elc_rs_glob[i]->lame_mu_tableid, 1, MPI_INT);
@@ -2644,6 +2686,9 @@ void noahs_ark(void) {
   ddd_add_member(n, &SEC_STRAINRATE_INVAR, 1, MPI_INT);
   ddd_add_member(n, &THIRD_STRAINRATE_INVAR, 1, MPI_INT);
   ddd_add_member(n, &WALL_DISTANCE, 1, MPI_INT);
+  ddd_add_member(n, &CONTACT_DISTANCE, 1, MPI_INT);
+  ddd_add_member(n, &PP_FLUID_STRESS, 1, MPI_INT);
+  ddd_add_member(n, &LUB_CONVECTION, 1, MPI_INT);
   ddd_add_member(n, &USER_POST, 1, MPI_INT);
   if (len_u_post_proc > 0) {
     ddd_add_member(n, u_post_proc, len_u_post_proc, MPI_DOUBLE);
@@ -3130,6 +3175,7 @@ void ark_landing(void) {
     e = elc_glob[i];
 
     dalloc(e->len_u_mu, e->u_mu);
+    e->u_mu_ns = malloc(e->len_u_mu_ns * sizeof(int));
 
     dalloc(e->len_u_lambda, e->u_lambda);
 
@@ -3148,6 +3194,7 @@ void ark_landing(void) {
     e = elc_rs_glob[i];
 
     dalloc(e->len_u_mu, e->u_mu);
+    e->u_mu_ns = malloc(e->len_u_mu_ns * sizeof(int));
 
     dalloc(e->len_u_lambda, e->u_lambda);
 
@@ -3444,6 +3491,9 @@ void noahs_dove(void) {
     crdv(m->len_u_DiffCoeff_function_constants, m->u_DiffCoeff_function_constants);
 
     crdv(e->len_u_mu, e->u_mu);
+    if (e->len_u_mu_ns > 0) {
+      ddd_add_member(n, e->u_mu_ns, e->len_u_mu_ns, MPI_INT);
+    }
 
     crdv(e->len_u_lambda, e->u_lambda);
 
@@ -3462,6 +3512,9 @@ void noahs_dove(void) {
     e = elc_rs_glob[i];
 
     crdv(e->len_u_mu, e->u_mu);
+    if (e->len_u_mu_ns > 0) {
+      ddd_add_member(n, e->u_mu_ns, e->len_u_mu_ns, MPI_INT);
+    }
 
     crdv(e->len_u_lambda, e->u_lambda);
 

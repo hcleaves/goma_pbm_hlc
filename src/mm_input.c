@@ -917,6 +917,19 @@ void rd_genl_specs(FILE *ifp, char *input) {
   snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Debug", Debug_Flag);
   ECHO(echo_string, echo_file);
 
+  iread = look_for_optional(ifp, "Print 3D BC Dup", input, '=');
+  if (iread == 1) {
+    if (fscanf(ifp, "%d", &Print3DBCDup) != 1) {
+      DPRINTF(stderr, "%s:\tError reading Print 3D BC Dup Level\n", yo);
+      exit(-1);
+    }
+  } else {
+    Print3DBCDup = 0;
+  }
+
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %d", "Print 3D BC Dup", Print3DBCDup);
+  ECHO(echo_string, echo_file);
+
 #ifdef MATRIX_DUMP
   (void)look_for_optional_int(ifp, "Number of Jacobian File Dumps", &Number_Jac_Dump, 0);
 
@@ -3312,8 +3325,8 @@ void rd_turbulent_specs(FILE *ifp, char *input) {
       }
 
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s", "Turbulence Wall Node Sets");
-      for (int i = 0; i < upd->turbulent_info->num_side_sets; i++) {
-        SPF(endofstring(echo_string), " %d", upd->turbulent_info->side_set_ids[i]);
+      for (int i = 0; i < upd->turbulent_info->num_node_sets; i++) {
+        SPF(endofstring(echo_string), " %d", upd->turbulent_info->node_set_ids[i]);
       }
       ECHO(echo_string, echo_file);
     }
@@ -3322,6 +3335,33 @@ void rd_turbulent_specs(FILE *ifp, char *input) {
       GOMA_EH(GOMA_ERROR, "Turbulence Calculate Wall Distance is ON but no wall sidesets or "
                           "nodesets were specified");
     }
+  }
+
+  iread = look_for_optional(ifp, "Turbulent k infinity", input, '=');
+  if (iread == 1) {
+
+    if (fscanf(ifp, "%lf", &(upd->turbulent_info->k_inf)) != 1) {
+      GOMA_EH(GOMA_ERROR, "Error reading Turbulence k infinity");
+    }
+
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %f", "Turbulence k infinity",
+             upd->turbulent_info->k_inf);
+    ECHO(echo_string, echo_file);
+  } else {
+    upd->turbulent_info->k_inf = 0.0;
+  }
+  iread = look_for_optional(ifp, "Turbulent omega infinity", input, '=');
+  if (iread == 1) {
+
+    if (fscanf(ifp, "%lf", &(upd->turbulent_info->omega_inf)) != 1) {
+      GOMA_EH(GOMA_ERROR, "Error reading Turbulence omega infinity");
+    }
+
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %lf", "Turbulence omega infinity",
+             upd->turbulent_info->omega_inf);
+    ECHO(echo_string, echo_file);
+  } else {
+    upd->turbulent_info->omega_inf = 0.0;
   }
 }
 /*
@@ -5819,6 +5859,7 @@ void rd_solver_specs(FILE *ifp, char *input) {
   strcpy(Matrix_Absolute_Threshold, "0");
   strcpy(Matrix_Reorder, "none");
   strcpy(Amesos_Package, "KLU");
+  strcpy(Amesos2_Package, "KLU2");
 
   /*  Read in Solver specifications */
 
@@ -5837,6 +5878,10 @@ void rd_solver_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   } else {
     upd->Total_Num_Matrices = 1;
+  }
+
+  for (int i = 0; i < upd->Total_Num_Matrices; i++) {
+    tran->relaxation[i] = 1.0;
   }
 
   iread = look_for_optional(ifp, "Strong Boundary Condition Replace Equation", input, '=');
@@ -5943,6 +5988,9 @@ void rd_solver_specs(FILE *ifp, char *input) {
   } else if (strcmp(Matrix_Solver, "amesos") == 0) {
     Linear_Solver = AMESOS;
     is_Solver_Serial = FALSE;
+  } else if (strcmp(Matrix_Solver, "amesos2") == 0) {
+    Linear_Solver = AMESOS2;
+    is_Solver_Serial = FALSE;
   } else if (strcmp(Matrix_Solver, "aztecoo") == 0) {
     Linear_Solver = AZTECOO;
     is_Solver_Serial = FALSE;
@@ -5981,6 +6029,10 @@ void rd_solver_specs(FILE *ifp, char *input) {
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
   } else if (strcmp(Matrix_Solver, "petsc_complex") == 0) {
     strcpy(Matrix_Format, "petsc_complex"); /* save string for aztec use */
+    strcpy(search_string, "Matrix storage format");
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
+  } else if (strcmp(Matrix_Solver, "amesos2") == 0) {
+    strcpy(Matrix_Format, "tpetra"); /* save string for aztec use */
     strcpy(search_string, "Matrix storage format");
     snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, Matrix_Format);
   } else if (strcmp(Matrix_Solver, "front") != 0) {
@@ -6074,6 +6126,27 @@ void rd_solver_specs(FILE *ifp, char *input) {
              default_string);
     strcpy(Stratimikos_File[0], "stratimikos.xml");
     ECHO(echo_string, echo_file);
+  }
+
+  for (int i = 1; i < MAX_NUM_MATRICES; i++) {
+    strcpy(Stratimikos_File[i], Stratimikos_File[0]);
+  }
+
+  strcpy(search_string, "Amesos2 File");
+  iread = look_for_optional(ifp, search_string, input, '=');
+  if (iread == 1) {
+    read_string(ifp, input, '\n');
+    strip(input);
+    strcpy(Amesos2_File[0], input);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
+    ECHO(echo_string, echo_file);
+  } else {
+    // Set stratimikos.xml as defualt stratimikos file
+    strcpy(Amesos2_File[0], "");
+  }
+
+  for (int i = 1; i < MAX_NUM_MATRICES; i++) {
+    strcpy(Amesos2_File[i], Amesos2_File[0]);
   }
 
   strcpy(search_string, "Preconditioner");
@@ -6422,6 +6495,19 @@ void rd_solver_specs(FILE *ifp, char *input) {
     ECHO(echo_string, echo_file);
   }
 
+  strcpy(search_string, "Amesos2 Solver Package");
+  iread = look_for_optional(ifp, search_string, input, '=');
+  if (iread == 1) {
+    read_string(ifp, input, '\n');
+    strip(input);
+    strcpy(Amesos2_Package, input);
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, search_string, input);
+    ECHO(echo_string, echo_file);
+  } else {
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, def_form, search_string, "KLU", default_string);
+    ECHO(echo_string, echo_file);
+  }
+
   /* first initialize modified newton parameter to false */
   modified_newton = FALSE;
 
@@ -6473,6 +6559,38 @@ void rd_solver_specs(FILE *ifp, char *input) {
     }
   } else {
     Time_Jacobian_Reformation_stride = 0;
+  }
+
+  char ls_type[MAX_CHAR_IN_INPUT] = "FULL_STEP";
+  ;
+  Newton_Line_Search_Type = NLS_FULL_STEP;
+  int lsread = look_for_optional_string(ifp, "Newton line search type", ls_type, MAX_CHAR_IN_INPUT);
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Newton line search type", ls_type);
+  if (lsread >= 1) {
+    if (strcmp("FULL_STEP", ls_type) == 0) {
+      Newton_Line_Search_Type = NLS_FULL_STEP;
+    } else if (strcmp("BACKTRACK", ls_type) == 0) {
+      Newton_Line_Search_Type = NLS_BACKTRACK;
+    } else {
+      GOMA_EH(GOMA_ERROR, "Unknown Newton line search type: %s", ls_type);
+    }
+  }
+  snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Newton line search type", ls_type);
+  ECHO(echo_string, echo_file);
+
+  if (fscanf(ifp, "%le %le %le %le %le", &custom_tol1, &damp_factor2, &custom_tol2, &damp_factor3,
+             &custom_tol3) != 5) {
+    damp_factor2 = damp_factor3 = -1.;
+    custom_tol1 = custom_tol2 = custom_tol3 = -1;
+    rewind(ifp); /* Added to make ibm happy when single relaxation value input. dal/1-6-99 */
+  } else {
+    if ((damp_factor1 <= 1. && damp_factor1 >= 0.) && (damp_factor2 <= 1. && damp_factor2 >= 0.) &&
+        (damp_factor3 <= 1. && damp_factor3 >= 0.)) {
+      SPF(endofstring(echo_string), " %.4g %.4g %.4g %.4g %.4g", custom_tol1, damp_factor2,
+          custom_tol2, damp_factor3, custom_tol3);
+    } else {
+      GOMA_EH(GOMA_ERROR, "All damping factors must be in the range 0 <= fact <=1");
+    }
   }
 
   look_for(ifp, "Newton correction factor", input, '=');
@@ -6689,6 +6807,81 @@ void rd_solver_specs(FILE *ifp, char *input) {
     ECHO("(Pressure Stabilization Scaling = 0.0) (default)", echo_file);
   }
 
+  iread = look_for_optional(ifp, "Pressure Stabilization Disable Tau Sens", input, '=');
+  if (iread == 1) {
+    (void)read_string(ifp, input, '\n');
+    strip(input);
+    if (strcmp(input, "no") == 0 || strcmp(input, "false") == 0) {
+      upd->disable_pspg_tau_sensitivities = false;
+    } else if (strcmp(input, "yes") == 0 || strcmp(input, "true") == 0) {
+      upd->disable_pspg_tau_sensitivities = true;
+    } else {
+      GOMA_EH(GOMA_ERROR,
+              "invalid choice: Pressure Stabilization Disable Tau Sens, yes (true) or no (false)");
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Pressure Stabilization Disable Tau Sens",
+             input);
+    ECHO(echo_string, echo_file);
+  } else {
+    upd->disable_pspg_tau_sensitivities = false;
+    ECHO("(Pressure Stabilization Disable Tau Sens = no) (default)", echo_file);
+  }
+  iread = look_for_optional(ifp, "Pressure Stabilization Lagged Tau", input, '=');
+  if (iread == 1) {
+    (void)read_string(ifp, input, '\n');
+    strip(input);
+    if (strcmp(input, "no") == 0 || strcmp(input, "false") == 0) {
+      upd->pspg_lagged_tau = false;
+    } else if (strcmp(input, "yes") == 0 || strcmp(input, "true") == 0) {
+      upd->pspg_lagged_tau = true;
+    } else {
+      GOMA_EH(GOMA_ERROR,
+              "invalid choice: Pressure Stabilization Lagged Tau, yes (true) or no (false)");
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "Pressure Stabilization Lagged Tau",
+             input);
+    ECHO(echo_string, echo_file);
+  } else {
+    upd->pspg_lagged_tau = false;
+    ECHO("(Pressure Stabilization Lagged Tau = no) (default)", echo_file);
+  }
+
+  iread = look_for_optional(ifp, "SUPG Lagged Tau", input, '=');
+  if (iread == 1) {
+    (void)read_string(ifp, input, '\n');
+    strip(input);
+    if (strcmp(input, "no") == 0 || strcmp(input, "false") == 0) {
+      upd->supg_lagged_tau = false;
+    } else if (strcmp(input, "yes") == 0 || strcmp(input, "true") == 0) {
+      upd->supg_lagged_tau = true;
+    } else {
+      GOMA_EH(GOMA_ERROR, "invalid choice: SUPG Lagged Tau, yes (true) or no (false)");
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "SUPG Lagged Tau", input);
+    ECHO(echo_string, echo_file);
+  } else {
+    upd->supg_lagged_tau = false;
+    ECHO("(SUPG Lagged Tau = no) (default)", echo_file);
+  }
+
+  iread = look_for_optional(ifp, "SUPG Disable Tau Sens", input, '=');
+  if (iread == 1) {
+    (void)read_string(ifp, input, '\n');
+    strip(input);
+    if (strcmp(input, "no") == 0 || strcmp(input, "false") == 0) {
+      upd->disable_supg_tau_sensitivities = false;
+    } else if (strcmp(input, "yes") == 0 || strcmp(input, "true") == 0) {
+      upd->disable_supg_tau_sensitivities = true;
+    } else {
+      GOMA_EH(GOMA_ERROR, "invalid choice: SUPG Disable Tau Sens, yes (true) or no (false)");
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, eoformat, "SUPG Disable Tau Sens", input);
+    ECHO(echo_string, echo_file);
+  } else {
+    upd->disable_supg_tau_sensitivities = false;
+    ECHO("(SUPG Disable Tau Sens = no) (default)", echo_file);
+  }
+
   iread = look_for_optional(ifp, "PSPG Advection Correction", input, '=');
   if (iread == 1) {
     (void)read_string(ifp, input, '\n');
@@ -6762,6 +6955,24 @@ void rd_solver_specs(FILE *ifp, char *input) {
   } else {
     upd->SegregatedSubcycles = 1;
     ECHO("(Number of Segregated Subcycles = 1) (default)", echo_file);
+  }
+  upd->AutoDiff = 0;
+  iread = look_for_optional(ifp, "Use AutoDiff Assembly", input, '=');
+  if (iread == 1) {
+    upd->AutoDiff = -1;
+    if (strcmp(input, "no") == 0) {
+      upd->AutoDiff = 0;
+    } else if (strcmp(input, "yes") == 0) {
+      upd->AutoDiff = 1;
+    }
+    if (upd->SegregatedSubcycles < 1) {
+      GOMA_EH(GOMA_ERROR, "Use AutoDiff Assembly should equal yes or no, instead found %s", input);
+    }
+    snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "%s = %s", "Use AutoDiff Assembly", input);
+    ECHO(echo_string, echo_file);
+  } else {
+    upd->AutoDiff = 0;
+    ECHO("(Use AutoDiff Assembly = no) (default)", echo_file);
   }
 
   /*IGBRK*/
@@ -8070,10 +8281,30 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         strip(input);
         if (strcmp(input, "yes") == 0) {
           pg->time_step_control_disabled[mtrx_index0] = TRUE;
-          snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Time step control disabled for matrix %d",
-                   mtrx_index1);
+          snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Disable time step control = %s", input);
           ECHO(echo_string, echo_file);
         }
+      }
+
+      if (look_forward_optional_until(ifp, "Relaxation", "MATRIX", input, '=') == 1) {
+        read_string(ifp, input, '\n');
+        strip(input);
+        if (sscanf(input, "%le", &tran->relaxation[mtrx_index0]) == 1) {
+          snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Relaxation = %g",
+                   tran->relaxation[mtrx_index0]);
+          ECHO(echo_string, echo_file);
+        }
+      }
+      if (look_forward_optional_until(ifp, "Relaxation Tolerance", "MATRIX", input, '=') == 1) {
+        read_string(ifp, input, '\n');
+        strip(input);
+        if (sscanf(input, "%le", &tran->relaxation_tolerance[mtrx_index0]) == 1) {
+          snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Relaxation Tolerance = %g",
+                   tran->relaxation[mtrx_index0]);
+          ECHO(echo_string, echo_file);
+        }
+      } else {
+        tran->relaxation_tolerance[mtrx_index0] = 1.0e-4;
       }
     }
     int iread;
@@ -8086,9 +8317,6 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
       snprintf(echo_string, MAX_CHAR_ECHO_INPUT, "Stratimikos file = %s for matrix %d", input,
                mtrx_index1);
       ECHO(echo_string, echo_file);
-    } else {
-      // Set stratimikos.xml as defualt stratimikos file
-      strcpy(Stratimikos_File[imtrx], "stratimikos.xml");
     }
 
     iread = look_forward_optional_until(ifp, "Normalized Residual Tolerance", "MATRIX", input, '=');
@@ -8454,6 +8682,10 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         ce = set_eqn(R_CUR_STRAIN, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "eddy_visc")) {
         ce = set_eqn(R_EDDY_NU, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "turb_k")) {
+        ce = set_eqn(R_TURB_K, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "turb_omega")) {
+        ce = set_eqn(R_TURB_OMEGA, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "shell_diff_flux")) {
         ce = set_eqn(R_SHELL_DIFF_FLUX, mtrx_index0, pd_ptr);
         pd_ptr->Do_Surf_Geometry = 1;
@@ -8959,6 +9191,10 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
         cv = set_var(GRAD_S_V_DOT_N3, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "EDDY_NU")) {
         cv = set_var(EDDY_NU, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "TURB_K")) {
+        cv = set_var(TURB_K, mtrx_index0, pd_ptr);
+      } else if (!strcasecmp(ts, "TURB_OMEGA")) {
+        cv = set_var(TURB_OMEGA, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "APR")) {
         cv = set_var(ACOUS_PREAL, mtrx_index0, pd_ptr);
       } else if (!strcasecmp(ts, "API")) {
@@ -9775,6 +10011,8 @@ void rd_eq_specs(FILE *ifp, char *input, const int mn) {
       case R_EM_H2_IMAG:
       case R_EM_H3_IMAG:
       case R_EDDY_NU:
+      case R_TURB_K:
+      case R_TURB_OMEGA:
 
         if (fscanf(ifp, "%lf %lf %lf %lf %lf", &(pd_ptr->etm[mtrx_index0][ce][(LOG2_MASS)]),
                    &(pd_ptr->etm[mtrx_index0][ce][(LOG2_ADVECTION)]),
@@ -10322,11 +10560,14 @@ int look_for_mat_prop(FILE *imp,              /* ptr to input stream (in)*/
      *                 Material_Property[]
      *                 Material_Model
      */
-    if (!strcmp(model_name, "CONSTANT") || !strcmp(model_name, "RATIO")) {
+    if (!strcmp(model_name, "CONSTANT") || !strcmp(model_name, "RATIO") ||
+        !strcmp(model_name, "TIME_RAMP")) {
       if (!strcmp(model_name, "CONSTANT"))
         DumModel = CONSTANT;
       if (!strcmp(model_name, "RATIO"))
         DumModel = RATIO;
+      if (!strcmp(model_name, "TIME_RAMP"))
+        DumModel = TIME_RAMP;
       if (num_values == SCALAR_INPUT) {
         if (fscanf(imp, "%lf ", &a0) != 1) {
           GOMA_EH(GOMA_ERROR, "Expected 1 flt for CONSTANT model %s, mat file \"%s\"",
@@ -10666,7 +10907,8 @@ int look_for_modal_prop(FILE *imp,                 /* ptr to input stream (in)*/
                         const int modes,           /* number of viscoelastic modes (in) */
                         int *MaterialModel,        /* int material model (out)*/
                         dbl *modal_const,          /* modal data (out) */
-                        char *echo_string)         /*character array to pass back echoed input */
+                        char *model_name,
+                        char *echo_string) /*character array to pass back echoed input */
 {
   char input[MAX_CHAR_IN_INPUT]; /* dummy storage for input strings */
   int iread = -1;                /* status flag  */
@@ -10674,7 +10916,6 @@ int look_for_modal_prop(FILE *imp,                 /* ptr to input stream (in)*/
   char line[132];
   char *arguments[MAX_NUMBER_PARAMS];
   int num_const, i, got_it;
-  char model_name[MAX_CS_KEYWORD_LENGTH];
 
   got_it = look_forward_optional(imp, search_string, input, '=');
   if (got_it == 1) {
@@ -10711,14 +10952,6 @@ int look_for_modal_prop(FILE *imp,                 /* ptr to input stream (in)*/
       }
       *MaterialModel = DumModel;
       iread = 1;
-    } else if (!strcmp(model_name, "HERSCHEL_BULKLEY")) {
-      *MaterialModel = HERSCHEL_BULKLEY;
-      iread = 1;
-      printf("HERSCHEL_BULKLEY model used for %s\n", search_string);
-    } else if (!strcmp(model_name, "POWER_LAW")) {
-      *MaterialModel = POWER_LAW;
-      iread = 1;
-      printf("POWER_LAW model used for %s\n", search_string);
     } else {
       iread = -2;
     }
@@ -12469,7 +12702,7 @@ int count_datalines(FILE *ifp, char *input, const char *endlist) {
 #ifndef tflop
   fgetpos(ifp, &file_position); /* OK everybody, remember where we parked */
 #else
-  file_position = ftell(ifp);          /* OK everybody, remember where we parked */
+  file_position = ftell(ifp); /* OK everybody, remember where we parked */
 #endif
 
   if (endlist != NULL) /* Table data is in input deck */

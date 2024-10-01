@@ -2471,7 +2471,7 @@ void mass_flux_surf_SULFIDATION(dbl mass_flux[MAX_CONC],
     c_H2S = fv->c[0]; /* H2S is the 1st diffusing species  */
     c_O2 = fv->c[1];  /* O2 is the 2nd diffusion species   */
     mass_flux[wspec] = nu * k1 * exp(-E1 / R / T) * c_H2S * sqrt(c_O2);
-  } else if (mode == FULL) {
+  } else if (mode == METAL_CORROSION_FULL) {
     fprintf(stderr, "The full model has not yet implemented - awaits future efforts\n");
     exit(1);
   } else if (mode == ANNIHILATION_ELECTRONEUTRALITY) {
@@ -2542,7 +2542,7 @@ void mass_flux_surf_SULFIDATION(dbl mass_flux[MAX_CONC],
       }
       d_mass_flux[wspec][TEMPERATURE] =
           nu * k1 * (E1 / R / T / T) * exp(-E1 / R / T) * c_H2S * c_O2;
-    } else if (mode == FULL) {
+    } else if (mode == METAL_CORROSION_FULL) {
       fprintf(stderr, "The full model has not yet implemented - awaits future efforts\n");
       exit(1);
     } else if (mode == ANNIHILATION_ELECTRONEUTRALITY) {
@@ -7312,7 +7312,7 @@ void compute_leak_velocity(double *vnorm,
           } else if (mode == GAS_DIFFUSION) {
             StoiCoef[wspec] = -1.0; /* 1 mole of Cu2S produced    */
             /* per mole of H2S consumped  */
-          } else if (mode == FULL) {
+          } else if (mode == METAL_CORROSION_FULL) {
             fprintf(stderr, "The full model has not yet implemented - awaits future efforts\n");
             exit(1);
           }
@@ -8827,6 +8827,15 @@ int get_convection_velocity(
             volsolid_old -= fv_old->c[w] * mp->molar_volume[w];
         }
         break;
+      case SPECIES_MASS_FRACTION:
+        volsolid = 1.;
+        volsolid_old = 1.;
+        for (w = 0; w < pd->Num_Species_Eqn; w++) {
+          volsolid -= MAX(fv->c[w], 0) * mp->density * mp->specific_volume[w];
+          if (pd->TimeIntegration != STEADY)
+            volsolid_old -= fv_old->c[w] * mp->density * mp->specific_volume[w];
+        }
+        break;
       default:
         volsolid = 1.;
         volsolid_old = 1.;
@@ -8837,15 +8846,12 @@ int get_convection_velocity(
         }
         break;
       }
-      if (volsolid <= 0) {
+      if (volsolid < 0) {
         double volso = 1.0;
-        fprintf(stderr, "nonvolatile fraction %g %g %g %g\n", volsolid, fv->x[0], fv->x[1],
-                fv->x[2]);
         for (w = 0; w < pd->Num_Species_Eqn; w++) {
           volso -= fv->c[w] * mp->specific_volume[w];
-          fprintf(stderr, "spec %d %g %g %g\n", w, fv->c[w], mp->specific_volume[w], volso);
         }
-        GOMA_WH(-1, "negative nonvolatile volume fraction");
+        GOMA_WH(-1, "negative nonvolatile volume fraction %g %g", volsolid, fv->c[0]);
       }
 
       for (p = 0; p < VIM; p++) {
@@ -8853,8 +8859,8 @@ int get_convection_velocity(
         vconv_old[p] = 0.;
         if (cr->MassFluxModel == FICKIAN || cr->MassFluxModel == STEFAN_MAXWELL ||
             cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
-            cr->MassFluxModel ==
-                STEFAN_MAXWELL_VOLUME) /* Last modified; KSC: 9/98  and  RSL 6/29/00  */
+            cr->MassFluxModel == STEFAN_MAXWELL_VOLUME ||
+            cr->MassFluxModel == FICKIAN_SHELL) /* Last modified; KSC: 9/98  and  RSL 6/29/00  */
         {
           if (Diffusivity())
             GOMA_EH(-1, "Error in Diffusivity.");

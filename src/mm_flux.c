@@ -1002,14 +1002,18 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               break;
 
             case VOLUME_FLUX:
-              for (a = 0; a < WIM; a++) {
-                if (cr->MeshMotion == ARBITRARY)
-                  local_q += fv->snormal[a] * (fv->v[a] - x_dot[a]);
-                else if (pd->v[pg->imtrx][MESH_DISPLACEMENT1])
-                  local_q += fv->snormal[a] * (fv->d[a]);
-                else
-                  GOMA_EH(GOMA_ERROR,
-                          "Inconsistency in volume-flux specification. Contact Developers");
+              if (pd->CoordinateSystem == CARTESIAN_2pt5D) {
+                local_q += fv->v[2] - x_dot[2];
+              } else {
+                for (a = 0; a < WIM; a++) {
+                  if (cr->MeshMotion == ARBITRARY)
+                    local_q += fv->snormal[a] * (fv->v[a] - x_dot[a]);
+                  else if (pd->v[pg->imtrx][MESH_DISPLACEMENT1])
+                    local_q += fv->snormal[a] * (fv->d[a]);
+                  else
+                    GOMA_EH(GOMA_ERROR,
+                            "Inconsistency in volume-flux specification. Contact Developers");
+                }
               }
               local_flux += weight * det * local_q;
               break;
@@ -1084,7 +1088,8 @@ double evaluate_flux(const Exo_DB *exo,      /* ptr to basic exodus ii mesh info
               for (a = 0; a < VIM; a++) {
                 if (cr->MassFluxModel == FICKIAN || cr->MassFluxModel == STEFAN_MAXWELL ||
                     cr->MassFluxModel == STEFAN_MAXWELL_CHARGED ||
-                    cr->MassFluxModel == STEFAN_MAXWELL_VOLUME) {
+                    cr->MassFluxModel == STEFAN_MAXWELL_VOLUME ||
+                    cr->MassFluxModel == FICKIAN_SHELL) {
                   if (Diffusivity())
                     GOMA_EH(-1, "Error in Diffusivity.");
 
@@ -4151,36 +4156,24 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
   int side_id[12];
   double xf2D[6][2];
   int nint2D[6];
+  int neg_LS_integ =
+      (quantity == I_NEG_FILL || quantity == I_MASS_NEGATIVE_FILL || quantity == I_NEG_VOLPLANE ||
+       quantity == I_NEG_VX || quantity == I_NEG_VY || quantity == I_NEG_VZ ||
+       quantity == I_NEG_CENTER_X || quantity == I_NEG_CENTER_Y || quantity == I_NEG_CENTER_Z ||
+       I_HEAT_ENERGY_NEG);
+  int pos_LS_integ =
+      (quantity == I_POS_FILL || quantity == I_MASS_POSITIVE_FILL || quantity == I_POS_VOLPLANE ||
+       quantity == I_POS_VX || quantity == I_POS_VY || quantity == I_POS_VZ ||
+       quantity == I_POS_CENTER_X || quantity == I_POS_CENTER_Y || quantity == I_POS_CENTER_Z ||
+       I_HEAT_ENERGY_POS);
+  int do_LS_integ = (neg_LS_integ || pos_LS_integ);
 
-  adaptive_integration_active =
-      (ls != NULL && ls->AdaptIntegration &&
-       (quantity == I_POS_FILL || quantity == I_NEG_FILL || quantity == I_MASS_NEGATIVE_FILL ||
-        quantity == I_MASS_POSITIVE_FILL || quantity == I_POS_VOLPLANE ||
-        quantity == I_NEG_VOLPLANE || quantity == I_POS_CENTER_X || quantity == I_POS_CENTER_Y ||
-        quantity == I_POS_CENTER_Z || quantity == I_NEG_CENTER_X || quantity == I_NEG_CENTER_Y ||
-        quantity == I_NEG_CENTER_Z || quantity == I_POS_VX || quantity == I_POS_VY ||
-        quantity == I_POS_VZ || quantity == I_NEG_VX || quantity == I_NEG_VY ||
-        quantity == I_NEG_VZ));
-
+  adaptive_integration_active = (ls != NULL && ls->AdaptIntegration && do_LS_integ);
   subgrid_integration_active =
-      (ls != NULL && ls->Integration_Depth > 0 && !adaptive_integration_active &&
-       (quantity == I_POS_FILL || quantity == I_NEG_FILL || quantity == I_MASS_NEGATIVE_FILL ||
-        quantity == I_MASS_POSITIVE_FILL || quantity == I_POS_VOLPLANE ||
-        quantity == I_NEG_VOLPLANE || quantity == I_POS_CENTER_X || quantity == I_POS_CENTER_Y ||
-        quantity == I_POS_CENTER_Z || quantity == I_NEG_CENTER_X || quantity == I_NEG_CENTER_Y ||
-        quantity == I_NEG_CENTER_Z || quantity == I_LS_ARC_LENGTH || quantity == I_POS_VX ||
-        quantity == I_POS_VY || quantity == I_POS_VZ || quantity == I_NEG_VX ||
-        quantity == I_NEG_VY || quantity == I_NEG_VZ));
+      (ls != NULL && ls->Integration_Depth > 0 && !adaptive_integration_active && do_LS_integ);
   subelement_vol_integration_active =
       (ls != NULL && ls->SubElemIntegration && !adaptive_integration_active &&
-       (params == NULL || params[0] == 0.) &&
-       (quantity == I_POS_FILL || quantity == I_NEG_FILL || quantity == I_MASS_NEGATIVE_FILL ||
-        quantity == I_MASS_POSITIVE_FILL || quantity == I_POS_VOLPLANE ||
-        quantity == I_NEG_VOLPLANE || quantity == I_POS_CENTER_X || quantity == I_POS_CENTER_Y ||
-        quantity == I_POS_CENTER_Z || quantity == I_NEG_CENTER_X || quantity == I_NEG_CENTER_Y ||
-        quantity == I_NEG_CENTER_Z || quantity == I_POS_VX || quantity == I_POS_VY ||
-        quantity == I_POS_VZ || quantity == I_NEG_VX || quantity == I_NEG_VY ||
-        quantity == I_NEG_VZ));
+       (params == NULL || params[0] == 0.) && do_LS_integ);
   subelement_surf_integration_active =
       (ls != NULL && ls->SubElemIntegration && !adaptive_integration_active &&
        (params == NULL || params[0] == 0.) &&
@@ -4241,7 +4234,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
       ip_total = elem_info(NQUAD, ei[pg->imtrx]->ielem_type);
 
       if (subgrid_integration_active) {
-        double width = params == NULL ? ls->Length_Scale : 2.0 * params[0];
+        double width = num_params == 0 ? ls->Length_Scale : 2.0 * params[0];
 
         if ((Use_Subgrid_Integration = current_elem_overlaps_interface(width))) {
           ip_total =
@@ -4249,15 +4242,9 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
         }
       } else if (subelement_vol_integration_active) {
         if ((Use_Subelement_Integration = current_elem_on_isosurface(FILL, 0.))) {
-          if (quantity == I_NEG_FILL || quantity == I_MASS_NEGATIVE_FILL ||
-              quantity == I_NEG_VOLPLANE || quantity == I_NEG_VX || quantity == I_NEG_VY ||
-              quantity == I_NEG_VZ || quantity == I_NEG_CENTER_X || quantity == I_NEG_CENTER_Y ||
-              quantity == I_NEG_CENTER_Z) {
+          if (neg_LS_integ) {
             ip_total = get_subelement_integration_pts(&s, &weight, NULL, 0., -2, -1);
-          } else if (quantity == I_POS_FILL || quantity == I_MASS_POSITIVE_FILL ||
-                     quantity == I_POS_VOLPLANE || quantity == I_POS_VX || quantity == I_POS_VY ||
-                     quantity == I_POS_VZ || quantity == I_POS_CENTER_X ||
-                     quantity == I_POS_CENTER_Y || quantity == I_POS_CENTER_Z) {
+          } else if (pos_LS_integ) {
             ip_total = get_subelement_integration_pts(&s, &weight, NULL, 0., -2, 1);
           } else {
             ip_total = get_subelement_integration_pts(&s, &weight, NULL, 0., -2, 0);
@@ -4276,9 +4263,7 @@ double evaluate_volume_integral(const Exo_DB *exo,  /* ptr to basic exodus ii me
           ls_F[i] = *esp_old->F[i];
         }
         wt_type = 2;
-        if (quantity == I_NEG_FILL || quantity == I_NEG_VOLPLANE || quantity == I_NEG_CENTER_X ||
-            quantity == I_NEG_CENTER_Y || quantity == I_NEG_CENTER_Z || quantity == I_NEG_VX ||
-            quantity == I_NEG_VY || quantity == I_NEG_VZ) {
+        if (neg_LS_integ) {
           for (i = 0; i < ei[pg->imtrx]->num_local_nodes; i++) {
             ls_F[i] = -ls_F[i];
           }
@@ -5055,8 +5040,22 @@ int compute_volume_integrand(const int quantity,
     }
 
   } break;
-  case I_HEAT_ENERGY: {
-    double rho, Cp;
+  case I_HEAT_ENERGY:
+  case I_HEAT_ENERGY_POS:
+  case I_HEAT_ENERGY_NEG: {
+    double alpha, rho, Cp;
+    double height = 1.0, temp = fv->T;
+    double H_U, dH_U_dtime, H_L, dH_L_dtime;
+    double dH_U_dX[DIM], dH_L_dX[DIM], dH_U_dp, dH_U_ddh, dH_dF[MDE];
+    memset(dH_U_dX, 0, sizeof(dbl) * DIM);
+    memset(dH_L_dX, 0, sizeof(dbl) * DIM);
+    memset(dH_dF, 0, sizeof(dbl) * MDE);
+
+    if (ls != NULL && (quantity == I_HEAT_ENERGY_NEG || quantity == I_HEAT_ENERGY_POS)) {
+      alpha = params == NULL ? ls->Length_Scale : 2.0 * params[0];
+      load_lsi(alpha);
+    }
+
     rho = density(NULL, time);
     Cp = heat_capacity(NULL, time);
 
@@ -5064,7 +5063,21 @@ int compute_volume_integrand(const int quantity,
       rho = 1.0;
       Cp = 1.0;
     }
-    *sum += rho * Cp * fv->T * weight * det;
+    if (is_shell) {
+      height = height_function_model(&H_U, &dH_U_dtime, &H_L, &dH_L_dtime, dH_U_dX, dH_L_dX,
+                                     &dH_U_dp, &dH_U_ddh, dH_dF, time, delta_t);
+      if (mp->HeightUFunctionModel == WALL_DISTMOD || mp->HeightUFunctionModel == WALL_DISTURB) {
+        height = MAX(H_U - H_L, DBL_SEMI_SMALL);
+      }
+      temp = fv->sh_t;
+    }
+
+    if (quantity == I_HEAT_ENERGY_NEG) {
+      height *= lsi->H;
+    } else if (quantity == I_HEAT_ENERGY_POS) {
+      height *= (1.0 - lsi->H);
+    }
+    *sum += height * rho * Cp * temp * weight * det;
 
     if (J_AC != NULL) {
       for (p = 0; p < dim; p++) {
@@ -5074,17 +5087,33 @@ int compute_volume_integrand(const int quantity,
 
           for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
             J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
-                rho * Cp * fv->T * weight *
+                height * rho * Cp * temp * weight *
                 (h3 * bf[pd->ShapeVar]->d_det_J_dm[p][j] + fv->dh3dq[p] * bf[var]->phi[j] * det_J);
+            J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+                (dH_U_dX[p] - dH_L_dX[p]) * bf[var]->phi[j] * rho * Cp * temp * weight * det;
           }
         }
       }
-      var = TEMPERATURE;
+
+      if (is_shell) {
+        var = SHELL_TEMPERATURE;
+      } else {
+        var = TEMPERATURE;
+      }
+      if (pd->v[pg->imtrx][var]) {
+
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          J_AC[ei[pg->imtrx]->gun_list[var][j]] +=
+              height * rho * Cp * bf[var]->phi[j] * weight * det;
+        }
+      }
+
+      var = FILL;
 
       if (pd->v[pg->imtrx][var]) {
 
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
-          J_AC[ei[pg->imtrx]->gun_list[var][j]] += rho * Cp * bf[var]->phi[j] * weight * det;
+          J_AC[ei[pg->imtrx]->gun_list[var][j]] += dH_dF[j] * rho * Cp * temp * weight * det;
         }
       }
     }
@@ -5200,7 +5229,7 @@ int compute_volume_integrand(const int quantity,
     double alpha, height = 1.0;
     double H_U, dH_U_dtime, H_L, dH_L_dtime;
     double dH_U_dX[DIM], dH_L_dX[DIM], dH_U_dp, dH_U_ddh, dH_dF[MDE];
-    if (pd->e[pg->imtrx][R_LUBP])
+    if (is_shell)
       height = height_function_model(&H_U, &dH_U_dtime, &H_L, &dH_L_dtime, dH_U_dX, dH_L_dX,
                                      &dH_U_dp, &dH_U_ddh, dH_dF, time, delta_t);
     if (adapt_int_flag) {
@@ -7386,6 +7415,24 @@ static int load_fv_sens(void) {
     dofs = ei[pg->imtrx]->dof[v];
     for (i = 0; i < dofs; i++) {
       fv_sens->eddy_nu += *esp_old->eddy_nu[i] * bf[v]->phi[i];
+    }
+  }
+
+  v = TURB_K;
+  fv_sens->turb_k = 0.;
+  if (pd->v[pg->imtrx][v]) {
+    dofs = ei[pg->imtrx]->dof[v];
+    for (i = 0; i < dofs; i++) {
+      fv_sens->turb_k += *esp_old->turb_k[i] * bf[v]->phi[i];
+    }
+  }
+
+  v = TURB_OMEGA;
+  fv_sens->turb_omega = 0.;
+  if (pd->v[pg->imtrx][v]) {
+    dofs = ei[pg->imtrx]->dof[v];
+    for (i = 0; i < dofs; i++) {
+      fv_sens->turb_omega += *esp_old->turb_omega[i] * bf[v]->phi[i];
     }
   }
 

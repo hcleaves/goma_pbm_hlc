@@ -54,8 +54,8 @@ dbl velo_vary_fnc(const int velo_condition,
                   const dbl x1,
                   const dbl x2,
                   const dbl x3,
-                  const dbl p[],
-                  const dbl time) {
+                  const dbl p[] MAYBE_UNUSED,
+                  const dbl time MAYBE_UNUSED) {
   /*  dbl v_max, gap, u, midpt, channel; */
   double f = 0.0;
   /*  double a1,a2;
@@ -182,12 +182,12 @@ dbl velo_vary_fnc(const int velo_condition,
   // *
 }
 /*****************************************************************************/
-dbl dvelo_vary_fnc_d1(const int velo_condition,
-                      const dbl x1,
-                      const dbl x2,
-                      const dbl x3,
-                      const dbl p[],
-                      const dbl time) {
+dbl dvelo_vary_fnc_d1(const int velo_condition MAYBE_UNUSED,
+                      const dbl x1 MAYBE_UNUSED,
+                      const dbl x2 MAYBE_UNUSED,
+                      const dbl x3 MAYBE_UNUSED,
+                      const dbl p[] MAYBE_UNUSED,
+                      const dbl time MAYBE_UNUSED) {
   dbl f = 0.0;
   dbl a2;
   /* dbl radius, drdx1; */
@@ -227,12 +227,12 @@ dbl dvelo_vary_fnc_d1(const int velo_condition,
    */
 }
 /*****************************************************************************/
-dbl dvelo_vary_fnc_d2(const int velo_condition,
-                      const dbl x1,
-                      const dbl x2,
-                      const dbl x3,
-                      const dbl p[],
-                      const dbl time) {
+dbl dvelo_vary_fnc_d2(const int velo_condition MAYBE_UNUSED,
+                      const dbl x1 MAYBE_UNUSED,
+                      const dbl x2 MAYBE_UNUSED,
+                      const dbl x3 MAYBE_UNUSED,
+                      const dbl p[] MAYBE_UNUSED,
+                      const dbl time MAYBE_UNUSED) {
   /* for PI use M_PIE Constant from std.h include file. */
 
   dbl f = 0.0;
@@ -314,12 +314,12 @@ dbl dvelo_vary_fnc_d2(const int velo_condition,
 }
 
 /*****************************************************************************/
-dbl dvelo_vary_fnc_d3(const int velo_condition,
-                      const dbl x1,
-                      const dbl x2,
-                      const dbl x3,
-                      const dbl p[],
-                      const dbl time) {
+dbl dvelo_vary_fnc_d3(const int velo_condition MAYBE_UNUSED,
+                      const dbl x1 MAYBE_UNUSED,
+                      const dbl x2 MAYBE_UNUSED,
+                      const dbl x3 MAYBE_UNUSED,
+                      const dbl p[] MAYBE_UNUSED,
+                      const dbl time MAYBE_UNUSED) {
   /* for PI use M_PIE Constant from std.h include file. */
   dbl f;
 
@@ -343,7 +343,11 @@ dbl dvelo_vary_fnc_d3(const int velo_condition,
 /*****************************************************************************/
 /*       Functions for solid boundary description                            */
 /*****************************************************************************/
-dbl fnc(const dbl x1, const dbl x2, const dbl x3, const dbl p[], const dbl time) {
+dbl fnc(const dbl x1 MAYBE_UNUSED,
+        const dbl x2 MAYBE_UNUSED,
+        const dbl x3 MAYBE_UNUSED,
+        const dbl p[] MAYBE_UNUSED,
+        const dbl time MAYBE_UNUSED) {
   /* for PI use M_PIE Constant from std.h include file. */
 
   /* cylinder with axis parallel to z */
@@ -356,7 +360,11 @@ dbl fnc(const dbl x1, const dbl x2, const dbl x3, const dbl p[], const dbl time)
   return (f); /* Here's a good default behavior! */
 }
 /*****************************************************************************/
-dbl dfncd1(const dbl x1, const dbl x2, const dbl x3, const dbl p[], const dbl time) {
+dbl dfncd1(const dbl x1 MAYBE_UNUSED,
+           const dbl x2 MAYBE_UNUSED,
+           const dbl x3 MAYBE_UNUSED,
+           const dbl p[] MAYBE_UNUSED,
+           const dbl time MAYBE_UNUSED) {
   /* for PI use M_PIE Constant from std.h include file. */
   dbl f = 0;
 
@@ -375,7 +383,11 @@ dbl dfncd1(const dbl x1, const dbl x2, const dbl x3, const dbl p[], const dbl ti
    */
 }
 /*****************************************************************************/
-dbl dfncd2(const dbl x1, const dbl x2, const dbl x3, const dbl p[], const dbl time) {
+dbl dfncd2(const dbl x1 MAYBE_UNUSED,
+           const dbl x2 MAYBE_UNUSED,
+           const dbl x3 MAYBE_UNUSED,
+           const dbl p[] MAYBE_UNUSED,
+           const dbl time MAYBE_UNUSED) {
   /* for PI use M_PIE Constant from std.h include file. */
   dbl f = 0; /* dfdx2; */
 
@@ -396,7 +408,11 @@ dbl dfncd2(const dbl x1, const dbl x2, const dbl x3, const dbl p[], const dbl ti
    */
 }
 /*****************************************************************************/
-dbl dfncd3(const dbl x1, const dbl x2, const dbl x3, const dbl p[], const dbl time) {
+dbl dfncd3(const dbl x1 MAYBE_UNUSED,
+           const dbl x2 MAYBE_UNUSED,
+           const dbl x3 MAYBE_UNUSED,
+           const dbl p[] MAYBE_UNUSED,
+           const dbl time MAYBE_UNUSED) {
   /* for PI use M_PIE Constant from std.h include file. */
   dbl f = 0;
 
@@ -418,9 +434,9 @@ dbl dfncd3(const dbl x1, const dbl x2, const dbl x3, const dbl p[], const dbl ti
 /****************************************************************************/
 
 void quser_surf(double func[DIM],
-                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                double p[], /* parameters to parameterize heat transfer model*/
-                const dbl time)
+                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE] MAYBE_UNUSED,
+                double p[] MAYBE_UNUSED, /* parameters to parameterize heat transfer model*/
+                const dbl time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which calculates the surface integral for user-defined heat
@@ -436,7 +452,11 @@ void quser_surf(double func[DIM],
   */
 
   /* Comment this out FIRST!!!!! */
+  for (int i = 0; i < DIM; i++) {
+    func[i] = 0;
+  }
   GOMA_EH(GOMA_ERROR, "No Q_USER model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /* Add your function and sensitivities here */
 
@@ -454,15 +474,17 @@ void quser_surf(double func[DIM],
  ****************************************************************************/
 
 void tuser(double *func,
-           double d_func[],     /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
-           const double u_bc[], /* to parameterize temperature eqn model*/
-           const double time) {
+           double d_func[] MAYBE_UNUSED,     /* defined [MAX_VARIABLE_TYPES + MAX_CONC] */
+           const double u_bc[] MAYBE_UNUSED, /* to parameterize temperature eqn model*/
+           const double time MAYBE_UNUSED) {
   /*
   int var;
   double time_hr;
   */
   /* Comment this out FIRST!!!!! */
+  *func = 0;
   GOMA_EH(GOMA_ERROR, "No T_USER  model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /**************************** EXECUTION BEGINS *******************************/
 
@@ -504,15 +526,15 @@ void tuser(double *func,
 /****************************************************************************/
 
 void yuser_surf(double *func,
-                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                const int species,
-                const double u_bc[], /* to parameterize temperature eqn model */
-                const double time)
+                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE] MAYBE_UNUSED,
+                const int species MAYBE_UNUSED,
+                const double u_bc[] MAYBE_UNUSED, /* to parameterize species eqn model */
+                const double time MAYBE_UNUSED)
 
 /******************************************************************************
  *
- * Function which calculates the surface integral for user-defined heat
- * transfer model.
+ * Function which calculates the surface integral for user-defined species
+ * model.
  *
  *****************************************************************************/
 {
@@ -521,7 +543,9 @@ void yuser_surf(double *func,
   double radius, phiw, phim, xi, alpha;
   */
   /* Comment this out FIRST!!!!! */
+  *func = 0;
   GOMA_EH(GOMA_ERROR, "No Y_USER model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /* Add your function and sensitivities here */
 
@@ -550,9 +574,9 @@ void yuser_surf(double *func,
 /****************************************************************************/
 
 void uuser_surf(double func[DIM],
-                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                double u_bc[], /* parameters to parameterize heat transfer model*/
-                const dbl time)
+                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE] MAYBE_UNUSED,
+                double u_bc[] MAYBE_UNUSED, /* parameters to parameterize heat transfer model*/
+                const dbl time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which calculates the surface integral for user-defined velocity
@@ -566,7 +590,11 @@ void uuser_surf(double func[DIM],
   */
 
   /* Comment this out FIRST!!!!! */
+  for (int i = 0; i < DIM; i++) {
+    func[i] = 0;
+  }
   GOMA_EH(GOMA_ERROR, "No U_USER model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /*
    if (time <= u_bc[0])
@@ -606,11 +634,12 @@ void uuser_surf(double func[DIM],
 
 /****************************************************************************/
 
-void uuser_colloc_surf(double *func,
-                       double d_func[],
-                       const double u_bc[], /* parameters to parameterize velocity model*/
-                       const int id,        /* node ID of the collocated surface */
-                       const double time)
+void uuser_colloc_surf(
+    double *func,
+    double d_func[] MAYBE_UNUSED,
+    const double u_bc[] MAYBE_UNUSED, /* parameters to parameterize velocity model*/
+    const int id MAYBE_UNUSED,        /* node ID of the collocated surface */
+    const double time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which calculates the boundary collocation for user-defined velocity
@@ -619,16 +648,18 @@ void uuser_colloc_surf(double *func,
 {
 
   /* Comment this out FIRST!!!!! */
+  *func = 0;
   GOMA_EH(GOMA_ERROR, "No U_USER_COLLOC model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
 } /* END of routine uuser_colloc_surf                                       */
 
 /****************************************************************************/
 
 void vuser_surf(double func[DIM],
-                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                double u_bc[], /* parameters to parameterize heat transfer model*/
-                const dbl time)
+                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE] MAYBE_UNUSED,
+                double u_bc[] MAYBE_UNUSED, /* parameters to parameterize heat transfer model*/
+                const dbl time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which calculates the surface integral for user-defined velocity
@@ -642,7 +673,11 @@ void vuser_surf(double func[DIM],
   */
 
   /* Comment this out FIRST!!!!! */
+  for (int i = 0; i < DIM; i++) {
+    func[i] = 0;
+  }
   GOMA_EH(GOMA_ERROR, "No V_USER  model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /* Add your function and sensitivities here */
 
@@ -652,11 +687,12 @@ void vuser_surf(double func[DIM],
 
 /****************************************************************************/
 
-void vuser_colloc_surf(double *func,
-                       double d_func[],
-                       const double u_bc[], /* parameters to parameterize velocity model*/
-                       const int id,        /* node ID of the collocated surface */
-                       const double time)
+void vuser_colloc_surf(
+    double *func,
+    double d_func[] MAYBE_UNUSED,
+    const double u_bc[] MAYBE_UNUSED, /* parameters to parameterize velocity model*/
+    const int id MAYBE_UNUSED,        /* node ID of the collocated surface */
+    const double time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which calculates the boundary collocation for user-defined velocity
@@ -665,18 +701,20 @@ void vuser_colloc_surf(double *func,
 {
 
   /* Comment this out FIRST!!!!! */
+  *func = 0;
   GOMA_EH(GOMA_ERROR, "No V_USER_COLLOC model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
 } /* END of routine vuser_colloc_surf                                       */
 
 /****************************************************************************/
 
 void wuser_surf(double func[DIM],
-                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                double u_bc[], /* parameters to parameterize heat transfer model*/
-                const dbl time)
+                double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE] MAYBE_UNUSED,
+                double u_bc[] MAYBE_UNUSED, /* parameters to parameterize heat transfer model*/
+                const dbl time MAYBE_UNUSED)
 /******************************************************************************
- *
+ *:
  *  Function which calculates the surface integral for user-defined velocity
  *
  ******************************************************************************/
@@ -688,7 +726,11 @@ void wuser_surf(double func[DIM],
   */
 
   /* Comment this out FIRST!!!!! */
+  for (int i = 0; i < DIM; i++) {
+    func[i] = 0;
+  }
   GOMA_EH(GOMA_ERROR, "No W_USER  model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /* Add your function and sensitivities here */
 
@@ -696,11 +738,12 @@ void wuser_surf(double func[DIM],
 } /* END of routine wuser_surf                                               */
 /*****************************************************************************/
 
-void wuser_colloc_surf(double *func,
-                       double d_func[],
-                       const double u_bc[], /* parameters to parameterize velocity model*/
-                       const int id,        /* node ID of the collocated surface */
-                       const double time)
+void wuser_colloc_surf(
+    double *func,
+    double d_func[] MAYBE_UNUSED,
+    const double u_bc[] MAYBE_UNUSED, /* parameters to parameterize velocity model*/
+    const int id MAYBE_UNUSED,        /* node ID of the collocated surface */
+    const double time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which calculates the boundary collocation for user-defined velocity
@@ -709,13 +752,18 @@ void wuser_colloc_surf(double *func,
 {
 
   /* Comment this out FIRST!!!!! */
+  *func = 0;
   GOMA_EH(GOMA_ERROR, "No W_USER_COLLOC model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
 } /* END of routine vuser_colloc_surf                                       */
 
 /****************************************************************************/
 
-void dx_user_surf(double *func, double d_func[], const double u_bc[], const double time)
+void dx_user_surf(double *func,
+                  double d_func[] MAYBE_UNUSED,
+                  const double u_bc[] MAYBE_UNUSED,
+                  const double time MAYBE_UNUSED)
 
 /******************************************************************************
  *
@@ -730,7 +778,9 @@ void dx_user_surf(double *func, double d_func[], const double u_bc[], const doub
   double theta;
   */
   /* Comment this out FIRST!!!!! */
+  *func = 0;
   GOMA_EH(GOMA_ERROR, "No DX_USER model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /* Nice exmample for solid body rotation */
   /*
@@ -759,7 +809,10 @@ void dx_user_surf(double *func, double d_func[], const double u_bc[], const doub
 /****************************************************************************/
 /****************************************************************************/
 
-void dy_user_surf(double *func, double d_func[], const double u_bc[], const double time)
+void dy_user_surf(double *func,
+                  double d_func[] MAYBE_UNUSED,
+                  const double u_bc[] MAYBE_UNUSED,
+                  const double time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which calculates the surface integral for user-defined y -displacement
@@ -773,7 +826,9 @@ void dy_user_surf(double *func, double d_func[], const double u_bc[], const doub
   double theta;
   */
   /* Comment this out FIRST!!!!! */
+  *func = 0;
   GOMA_EH(GOMA_ERROR, "No DY_USER model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /* Add your function and sensitivities here */
 
@@ -791,7 +846,10 @@ void dy_user_surf(double *func, double d_func[], const double u_bc[], const doub
 /****************************************************************************/
 /****************************************************************************/
 
-void dz_user_surf(double *func, double d_func[], const double u_bc[], const double time)
+void dz_user_surf(double *func,
+                  double d_func[] MAYBE_UNUSED,
+                  const double u_bc[] MAYBE_UNUSED,
+                  const double time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which calculates the surface integral for user-defined z -displacement
@@ -805,7 +863,9 @@ void dz_user_surf(double *func, double d_func[], const double u_bc[], const doub
   */
 
   /* Comment this out FIRST!!!!! */
+  *func = 0;
   GOMA_EH(GOMA_ERROR, "No DZ_USER model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /* Add your function and sensitivities here */
 
@@ -815,7 +875,10 @@ void dz_user_surf(double *func, double d_func[], const double u_bc[], const doub
 
 /****************************************************************************/
 
-void p_liq_user_surf(double *func, double d_func[], const double u_bc[], const double time)
+void p_liq_user_surf(double *func,
+                     double d_func[] MAYBE_UNUSED,
+                     const double u_bc[] MAYBE_UNUSED,
+                     const double time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which sets liquid phase pressure over a sideset
@@ -829,7 +892,9 @@ void p_liq_user_surf(double *func, double d_func[], const double u_bc[], const d
   */
 
   /* Comment this out FIRST!!!!! */
+  *func = 0;
   GOMA_EH(GOMA_ERROR, "No P_LIQ_USER model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /*  Example.....
     if(time < u_bc[2])
@@ -851,7 +916,10 @@ void p_liq_user_surf(double *func, double d_func[], const double u_bc[], const d
 
 /****************************************************************************/
 
-void shell_p_open_user_surf(double *func, double d_func[], const double u_bc[], const double time)
+void shell_p_open_user_surf(double *func,
+                            double d_func[] MAYBE_UNUSED,
+                            const double u_bc[] MAYBE_UNUSED,
+                            const double time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which sets liquid phase open shell pressure over a sideset
@@ -910,10 +978,10 @@ void shell_p_open_user_surf(double *func, double d_func[], const double u_bc[], 
 } /* END of routine shell_p_open_user_surf */
 /****************************************************************************/
 void mass_flux_user_surf(dbl mass_flux[MAX_CONC],
-                         dbl d_mass_flux[MAX_CONC][MAX_VARIABLE_TYPES + MAX_CONC],
-                         const int wspec,
-                         const double p[],  /* Vector of constants from input card */
-                         const double time) /* time             */
+                         dbl d_mass_flux[MAX_CONC][MAX_VARIABLE_TYPES + MAX_CONC] MAYBE_UNUSED,
+                         const int wspec MAYBE_UNUSED,
+                         const double p[] MAYBE_UNUSED,  /* Vector of constants from input card */
+                         const double time MAYBE_UNUSED) /* time             */
 /******************************************************************************
  *
  *  Function which calculates the surface integral for user-defined
@@ -924,7 +992,11 @@ void mass_flux_user_surf(dbl mass_flux[MAX_CONC],
 {
 
   /* Comment this out FIRST!!!!! */
+  for (int i = 0; i < MAX_CONC; i++) {
+    mass_flux[i] = 0;
+  }
   GOMA_EH(GOMA_ERROR, "No YFLUX_USER model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /* Add your function and sensitivities here */
 
@@ -965,9 +1037,9 @@ void mass_flux_user_surf(dbl mass_flux[MAX_CONC],
 /*****************************************************************************/
 
 void fn_dot_T_user(double func[DIM],
-                   double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                   const double u_bc[],
-                   const dbl time)
+                   double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE] MAYBE_UNUSED,
+                   const double u_bc[] MAYBE_UNUSED,
+                   const dbl time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which calculates the pressure variation on a boundary
@@ -986,7 +1058,11 @@ void fn_dot_T_user(double func[DIM],
   /*  double wavelength;		wavelength of pressure  */
 
   /* Comment this out FIRST!!!!! */
+  for (int i = 0; i < DIM; i++) {
+    func[i] = 0;
+  }
   GOMA_EH(GOMA_ERROR, "No PRESSURE_USER model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /* Add your function and sensitivities here */
 
@@ -1051,9 +1127,9 @@ void fn_dot_T_user(double func[DIM],
 /*****************************************************************************/
 
 void flow_n_dot_T_user(double func[DIM],
-                       double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                       const double u_BC[], /* Parameters from input deck */
-                       const dbl time)
+                       double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE] MAYBE_UNUSED,
+                       const double u_BC[] MAYBE_UNUSED, /* Parameters from input deck */
+                       const dbl time MAYBE_UNUSED)
 /******************************************************************************
  *
  *  Function which calculates the pressure variation on a boundary
@@ -1071,7 +1147,12 @@ void flow_n_dot_T_user(double func[DIM],
   */
 
   /* Comment this out FIRST!!!!! */
+  for (int i = 0; i < DIM; i++) {
+    func[i] = 0;
+  }
+
   GOMA_EH(GOMA_ERROR, "No FLOW_PRESSURE_USER model implemented");
+  /* End of Comment this out FIRST!!!!! */
 
   /* Add your function and sensitivities here */
 
@@ -1114,7 +1195,8 @@ void flow_n_dot_T_user(double func[DIM],
 } /* END of routine flow_n_dot_T_user                                        */
 /*****************************************************************************/
 
-double var_CA_user(double Ca_local, int num, const double *a, double *d_cos_CA_Ca_local) {
+double
+var_CA_user(double Ca_local, int num MAYBE_UNUSED, const double *a, double *d_cos_CA_Ca_local) {
   double cos_CA;
   double static_CA;
   double cT;
@@ -1265,9 +1347,9 @@ int user_gibbs_criterion(const double fsnormal[MAX_PDIM], /* Vector of free surf
  ******************************************************************************/
 
 void force_user_surf(double func[DIM],
-                     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                     double p[],
-                     dbl time) {
+                     double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE] MAYBE_UNUSED,
+                     double p[] MAYBE_UNUSED,
+                     dbl time MAYBE_UNUSED) {
   /*
   int j, j_id;
   int var;
@@ -1356,9 +1438,9 @@ void force_user_surf(double func[DIM],
 
 /*****************************************************************************/
 void volt_user_surf(double func[DIM],
-                    double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                    double p[],
-                    const dbl time)
+                    double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE] MAYBE_UNUSED,
+                    double p[] MAYBE_UNUSED,
+                    const dbl time MAYBE_UNUSED)
 
 /******************************************************************************
 *
@@ -1442,9 +1524,9 @@ void volt_user_surf(double func[DIM],
 
 /*****************************************************************************/
 void current_user_surf(double func[DIM],
-                       double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE],
-                       double p[],
-                       const dbl time)
+                       double d_func[DIM][MAX_VARIABLE_TYPES + MAX_CONC][MDE] MAYBE_UNUSED,
+                       double p[] MAYBE_UNUSED,
+                       const dbl time MAYBE_UNUSED)
 
 /******************************************************************************
  *
@@ -1458,6 +1540,7 @@ void current_user_surf(double func[DIM],
   /***************************** EXECUTION BEGINS *******************************/
 
   /***********Very Simple Example for VAR Model with J(r) on Melt Pool ******/
+  *func = 0;
   /* *func=p[0]*exp(-3.0*pow(fv->x[1]/p[1],2));  */
 
   return;

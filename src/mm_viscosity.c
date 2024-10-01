@@ -23,7 +23,7 @@
 #include <stdlib.h>
 
 /* GOMA include files */
-
+#include "ad_turbulence.h"
 #include "density.h"
 #include "el_elm.h"
 #include "mm_as.h"
@@ -31,6 +31,7 @@
 #include "mm_eh.h"
 #include "mm_fill_ls.h"
 #include "mm_fill_terms.h"
+#include "mm_fill_turbulent.h"
 #include "mm_fill_util.h"
 #include "mm_mp.h"
 #include "mm_mp_const.h"
@@ -88,7 +89,7 @@
  * -----
  *
  *   mu		= viscosity
- *   d_mu       = dependence of viscosity on the indendent unknowns in the
+ *   d_mu       = dependence of viscosity on the independent unknowns in the
  *                local element stiffness matrix, where:
  *
  *   d_mu->gd	= derivative of viscosity wrt to strain rate invariant variables
@@ -130,7 +131,8 @@ double viscosity(struct Generalized_Newtonian *gn_local,
 
   if ((gn_local->ConstitutiveEquation == NEWTONIAN) ||
       (gn_local->ConstitutiveEquation == TURBULENT_SA) ||
-      (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
+      (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) ||
+      (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA)) {
     if (mp->ViscosityModel == USER) {
       err = usr_viscosity(mp->u_viscosity);
       mu = mp->viscosity;
@@ -139,6 +141,13 @@ double viscosity(struct Generalized_Newtonian *gn_local,
       if (d_mu != NULL && pd->v[pg->imtrx][var]) {
         for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
           d_mu->T[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+        }
+      }
+
+      var = SHELL_TEMPERATURE;
+      if (d_mu != NULL && pd->v[pg->imtrx][var]) {
+        for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+          d_mu->sh_t[j] = mp->d_viscosity[var] * bf[var]->phi[j];
         }
       }
 
@@ -296,6 +305,11 @@ double viscosity(struct Generalized_Newtonian *gn_local,
               }
             }
             break;
+          case SHELL_TEMPERATURE:
+            for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+              d_mu->sh_t[j] = table_local->slope[i];
+            }
+            break;
           default:
             GOMA_EH(GOMA_ERROR, "Variable function not yet implemented in material property table");
           }
@@ -308,38 +322,79 @@ double viscosity(struct Generalized_Newtonian *gn_local,
     /* Calculate contribution from turbulent viscosity */
     if ((gn_local->ConstitutiveEquation == TURBULENT_SA) ||
         (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC)) {
-      dbl scale = 1.0;
-      DENSITY_DEPENDENCE_STRUCT d_rho;
-      if (TURBULENT_SA_DYNAMIC) {
-        scale = density(&d_rho, tran->time_value);
-      }
-      int negative_mu_e = FALSE;
-      if (fv_old->eddy_nu < 0) {
-        negative_mu_e = TRUE;
-      }
-
-      double mu_newt = mp->viscosity;
-      if (negative_mu_e) {
-        mu = mu_newt;
+#ifdef GOMA_ENABLE_SACADO
+      if (upd->AutoDiff) {
+        mu = ad_sa_viscosity(gn_local, d_mu);
       } else {
+#endif
+        dbl scale = 1.0;
+        DENSITY_DEPENDENCE_STRUCT d_rho;
+        if (gn_local->ConstitutiveEquation == TURBULENT_SA_DYNAMIC) {
+          scale = density(&d_rho, tran->time_value);
+        }
+        int negative_mu_e = FALSE;
+        if (fv_old->eddy_nu < 0) {
+          negative_mu_e = TRUE;
+        }
 
-        double mu_e = fv->eddy_nu;
-        double cv1 = 7.1;
-        double chi = mu_e / mu_newt;
-        double fv1 = pow(chi, 3) / (pow(chi, 3) + pow(cv1, 3));
+        double mu_newt = mp->viscosity;
+        if (negative_mu_e) {
+          mu = mu_newt;
+        } else {
 
-        mu = scale * (mu_newt + (mu_e * fv1));
+          double mu_e = fv->eddy_nu;
+          double cv1 = 7.1;
+          double chi = mu_e / mu_newt;
+          double fv1 = pow(chi, 3) / (pow(chi, 3) + pow(cv1, 3));
 
-        double dchi_dmu_e = 1.0 / mu_newt;
-        double dfv1_dchi = 3 * pow(cv1, 3) * pow(chi, 2) / (pow((pow(chi, 3) + pow(cv1, 3)), 2));
-        double dfv1_dmu_e = dfv1_dchi * dchi_dmu_e;
+          mu = scale * (mu_newt + (mu_e * fv1));
 
-        if (d_mu != NULL) {
-          for (j = 0; j < ei[pg->imtrx]->dof[EDDY_NU]; j++) {
-            d_mu->eddy_nu[j] = scale * bf[EDDY_NU]->phi[j] * (fv1 + mu_e * dfv1_dmu_e);
+          double dchi_dmu_e = 1.0 / mu_newt;
+          double dfv1_dchi = 3 * pow(cv1, 3) * pow(chi, 2) / (pow((pow(chi, 3) + pow(cv1, 3)), 2));
+          double dfv1_dmu_e = dfv1_dchi * dchi_dmu_e;
+
+          if (d_mu != NULL) {
+            for (j = 0; j < ei[pg->imtrx]->dof[EDDY_NU]; j++) {
+              d_mu->eddy_nu[j] = scale * bf[EDDY_NU]->phi[j] * (fv1 + mu_e * dfv1_dmu_e);
+            }
+          }
+        }
+#ifdef GOMA_ENABLE_SACADO
+      }
+#endif
+    }
+
+    if (gn_local->ConstitutiveEquation == TURBULENT_K_OMEGA) {
+      double W[DIM][DIM];
+      if (pd->e[pg->imtrx][VELOCITY1] >= 0) {
+        for (int i = 0; i < DIM; i++) {
+          for (int j = 0; j < DIM; j++) {
+            W[i][j] = 0.5 * (fv_old->grad_v[i][j] - fv_old->grad_v[j][i]);
+          }
+        }
+      } else {
+        for (int i = 0; i < DIM; i++) {
+          for (int j = 0; j < DIM; j++) {
+            W[i][j] = 0.5 * (fv->grad_v[i][j] - fv->grad_v[j][i]);
           }
         }
       }
+      dbl Omega = 0.0;
+      for (int i = 0; i < DIM; i++) {
+        for (int j = 0; j < DIM; j++) {
+          Omega += W[i][j] * W[i][j];
+        }
+      }
+      Omega = sqrt(fmax(Omega, 1e-20));
+
+      dbl F1, F2;
+      compute_sst_blending(&F1, &F2);
+      mu = sst_viscosity(Omega, F2);
+#ifdef GOMA_ENABLE_SACADO
+      // mu = ad_turb_k_omega_sst_viscosity(d_mu);
+#else
+      GOMA_EH(GOMA_ERROR, "TURBULENT_K_OMEGA requires Sacado");
+#endif
     }
 
   } /* end Newtonian section */
@@ -421,6 +476,14 @@ double viscosity(struct Generalized_Newtonian *gn_local,
     {
       for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
         d_mu->T[j] = mp->d_viscosity[var] * bf[var]->phi[j];
+      }
+    }
+    var = SHELL_TEMPERATURE;
+    if (d_mu != NULL && pd->v[pg->imtrx][var])
+
+    {
+      for (j = 0; j < ei[pg->imtrx]->dof[var]; j++) {
+        d_mu->sh_t[j] = mp->d_viscosity[var] * bf[var]->phi[j];
       }
     }
   } else if (gn_local->ConstitutiveEquation == BOND) {
@@ -599,7 +662,8 @@ double viscosity(struct Generalized_Newtonian *gn_local,
 
   if (ls != NULL && gn_local->ConstitutiveEquation != VE_LEVEL_SET &&
       mp->ViscosityModel != LEVEL_SET && mp->ViscosityModel != LS_QUADRATIC && mp->mp2nd != NULL &&
-      (mp->mp2nd->ViscosityModel == CONSTANT || mp->mp2nd->ViscosityModel == RATIO)) {
+      (mp->mp2nd->ViscosityModel == CONSTANT || mp->mp2nd->ViscosityModel == RATIO ||
+       mp->mp2nd->ViscosityModel == TIME_RAMP)) {
     /* kludge for solidification tracking with phase function 0 */
     if (pfd != NULL && pd->e[pg->imtrx][R_EXT_VELOCITY]) {
       ls_old = ls;
@@ -2646,13 +2710,17 @@ int thermal_viscosity(dbl mu0,  /* reference temperature fluid viscosity */
 
   dbl T; /* Convenient local variables */
   int status = 1;
+  int var = TEMPERATURE;
 
-  if (!pd->v[pg->imtrx][TEMPERATURE]) {
+  if (!pd->v[pg->imtrx][TEMPERATURE] && !pd->v[pg->imtrx][SHELL_TEMPERATURE]) {
     return (0);
   }
 
   if (pd->gv[TEMPERATURE]) {
     T = fv->T;
+  } else if (pd->gv[SHELL_TEMPERATURE]) {
+    T = fv->sh_t;
+    var = SHELL_TEMPERATURE;
   } else {
     T = upd->Process_Temperature;
   }
@@ -2660,11 +2728,11 @@ int thermal_viscosity(dbl mu0,  /* reference temperature fluid viscosity */
   if (T <= 0.3) {
     mu = mu0 * exp(Aexp / 0.3);
     mp->viscosity = mu;
-    mp->d_viscosity[TEMPERATURE] = 0.;
+    mp->d_viscosity[var] = 0.;
   } else {
     mu = mu0 * exp(Aexp / T);
     mp->viscosity = mu;
-    mp->d_viscosity[TEMPERATURE] = -mu0 * Aexp / (T * T);
+    mp->d_viscosity[var] = -mu0 * Aexp / (T * T);
   }
 
   return (status);
@@ -3189,7 +3257,14 @@ int ls_modulate_viscosity(double *mu1,
   if (model == RATIO) {
     ratio = mu2;
     mu2 = *mu1 * ratio;
+  } else if (model == TIME_RAMP) {
+    ratio = 1.0;
+    if (tran->time_value < (tran->init_time + 10. * tran->Delta_t0)) {
+      ratio = (tran->time_value - tran->init_time) / (10. * tran->Delta_t0);
+    }
+    mu2 = *mu1 + ratio * (mu2 - *mu1);
   }
+
   if (d_mu == NULL) {
     *mu1 = ls_modulate_property(*mu1, mu2, width, pm_minus, pm_plus, NULL, &factor);
     return (1);
@@ -3200,6 +3275,8 @@ int ls_modulate_viscosity(double *mu1,
   if (model == RATIO) {
     factor *= (1. - ratio);
     factor += ratio;
+  } else if (model == TIME_RAMP) {
+    factor *= (1. - ratio);
   }
 
   d_mu->gd *= factor;
